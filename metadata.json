@@ -1,0 +1,7 @@
+{
+  "name": "Gás & Água Express - Logística Digital",
+  "description": "Uma plataforma completa de gerenciamento de logística para entregas de gás e água, incluindo painéis administrativos, gestão de pedidos, chat via WhatsApp e painel do entregador.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
