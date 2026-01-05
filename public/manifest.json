@@ -1,6 +1,6 @@
 {
-    "short_name": "GasAguaExpress",
-    "name": "Gás & Água Express SaaS",
+    "short_name": "Gás&Água",
+    "name": "Gás & Água Express",
     "icons": [
         {
             "src": "favicon.ico",
@@ -18,7 +18,7 @@
             "sizes": "512x512"
         }
     ],
-    "start_url": ".",
+    "start_url": "/?v=pwa",
     "display": "standalone",
     "theme_color": "#13a4ec",
     "background_color": "#ffffff"

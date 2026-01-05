@@ -20,9 +20,13 @@ export interface Order {
   tenantId: string;
   customerName: string;
   phone: string;
-  address: string;
+  zipCode: string;
+  street: string;
+  number: string;
+  complement?: string;
   neighborhood: string;
   city: string;
+  address: string; // Maintain full address for display/compatibility
   items: OrderItem[];
   timestamp: string;
   date: string;
@@ -36,6 +40,8 @@ export interface Order {
   deliveryType: 'Entrega' | 'Retirada';
   notes?: string;
   total: number;
+  lat?: number;
+  lng?: number;
 }
 
 export interface Product {
@@ -55,9 +61,13 @@ export interface Customer {
   tenantId: string;
   name: string;
   phone: string;
-  address: string;
+  zipCode: string;
+  street: string;
+  number: string;
+  complement?: string;
   neighborhood: string;
   city: string;
+  address: string; // Maintain full address for display/compatibility
   avatar: string;
   orderHistory: string[];
   creditLimit: number;
@@ -70,6 +80,8 @@ export interface Vehicle {
   plate: string;
   type: 'Carro';
   currentKM: number;
+  startShiftKM: number;
+  endShiftKM: number;
   lastOilChangeKM: number;
   nextOilChangeKM: number;
   lastOilChangeDate: string;
@@ -93,6 +105,8 @@ export interface Driver {
     orderCount: number;
     totalEarnings: number;
   };
+  lat?: number;
+  lng?: number;
 }
 
 export interface AdminUser {
@@ -143,10 +157,25 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+export interface Tenant {
+  id: string; // The Tenant ID used for login
+  name: string;
+  plan: 'Free' | 'Pro' | 'Enterprise';
+  status: 'Ativo' | 'Bloqueado';
+  adminLogin: string;
+  adminPassword: string;
+  createdAt: string;
+  billingDay: number;
+  maxUsers: number;
+  logo?: string;
+  backupEnabled: boolean;
+  storageEnabled: boolean;
+  apiEnabled: boolean;
+  databaseSize: string;
+}
+
 export interface BackupConfig {
-  lastLocalBackup?: string;
-  lastCloudBackup?: string;
   googleDriveConnected: boolean;
 }
 
-export type View = 'dashboard' | 'orders' | 'settings' | 'order-detail' | 'driver-panel' | 'drivers' | 'map' | 'clients' | 'inventory' | 'financial' | 'users' | 'whatsapp';
+export type View = 'dashboard' | 'orders' | 'settings' | 'order-detail' | 'driver-panel' | 'drivers' | 'map' | 'clients' | 'inventory' | 'financial' | 'users' | 'whatsapp' | 'super-admin';

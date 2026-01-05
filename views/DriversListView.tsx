@@ -7,9 +7,10 @@ interface DriversListViewProps {
     onAddDriver: (driver: Driver) => void;
     onDeleteDriver: (id: string) => void;
     onUpdateDriver: (driver: Driver) => void;
+    currentTenantId: string;
 }
 
-const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver, onDeleteDriver, onUpdateDriver }) => {
+const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver, onDeleteDriver, onUpdateDriver, currentTenantId }) => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [showVehicleModal, setShowVehicleModal] = useState<string | null>(null);
     const [newDriver, setNewDriver] = useState({
@@ -22,11 +23,26 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver,
         vehiclePlate: ''
     });
 
+    const handleAvatarUpload = (driverId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const driver = drivers.find(d => d.id === driverId);
+                if (driver) {
+                    onUpdateDriver({ ...driver, avatar: reader.result as string });
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleAddSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const id = 'd' + Math.random().toString(36).substr(2, 9);
         const driver: Driver = {
             id,
+            tenantId: '', // Será preenchido pelo App.tsx
             name: newDriver.name,
             login: newDriver.login,
             password: newDriver.password,
@@ -39,6 +55,8 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver,
                 plate: newDriver.vehiclePlate,
                 type: 'Carro',
                 currentKM: 0,
+                startShiftKM: 0,
+                endShiftKM: 0,
                 lastOilChangeKM: 0,
                 nextOilChangeKM: 5000,
                 lastOilChangeDate: new Date().toLocaleDateString(),
@@ -50,14 +68,16 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver,
         setNewDriver({ name: '', login: '', password: '', email: '', phone: '', vehicleModel: '', vehiclePlate: '' });
     };
 
-    const handleUpdateKM = (driverId: string, km: number) => {
+    const handleUpdateKM = (driverId: string, km: number, type: 'current' | 'start' | 'end') => {
         const driver = drivers.find(d => d.id === driverId);
         if (driver) {
             const updatedDriver = {
                 ...driver,
                 vehicle: {
                     ...driver.vehicle,
-                    currentKM: km
+                    currentKM: type === 'current' ? km : driver.vehicle.currentKM,
+                    startShiftKM: type === 'start' ? km : driver.vehicle.startShiftKM,
+                    endShiftKM: type === 'end' ? km : driver.vehicle.endShiftKM,
                 }
             };
             onUpdateDriver(updatedDriver);
@@ -83,6 +103,14 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver,
     const openWhatsApp = (phone: string) => {
         const cleanPhone = phone.replace(/\D/g, '');
         window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}`, '_blank');
+    };
+
+    const shareDriverLink = (driver: Driver) => {
+        const baseUrl = window.location.origin;
+        const link = `${baseUrl}/?driverLogin=${driver.login}&pass=${driver.password}&tenant=${currentTenantId}`;
+        const message = `Olá ${driver.name}! Aqui está o seu link de acesso exclusivo ao Gás & Água Express:\n\n🔗 ${link}\n\nAbra o link para começar a receber seus pedidos!`;
+        const cleanPhone = driver.phone.replace(/\D/g, '');
+        window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`, '_blank');
     };
 
     return (
@@ -124,8 +152,19 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver,
                         <div key={driver.id} className="bg-white dark:bg-[#1a2c35] rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:border-white/5 group hover:shadow-2xl transition-all relative overflow-hidden">
                             <div className="flex items-start justify-between mb-6">
                                 <div className="flex gap-4 items-center">
-                                    <div className="relative">
+                                    <div className="relative group cursor-pointer" onClick={() => document.getElementById(`avatar-input-${driver.id}`)?.click()}>
+                                        <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                            <span className="material-symbols-outlined text-white text-xl">add_a_photo</span>
+                                        </div>
                                         <img src={driver.avatar} className="size-14 rounded-2xl object-cover" alt={driver.name} />
+                                        <input
+                                            type="file"
+                                            id={`avatar-input-${driver.id}`}
+                                            className="hidden"
+                                            accept="image/*"
+                                            capture="user"
+                                            onChange={(e) => handleAvatarUpload(driver.id, e)}
+                                        />
                                         <div className={`absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-white dark:border-[#1a2c35] ${driver.status === 'available' ? 'bg-green-500' : driver.status === 'busy' ? 'bg-amber-500' : 'bg-slate-300'
                                             }`}></div>
                                     </div>
@@ -135,6 +174,13 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver,
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
+                                    <button
+                                        onClick={() => shareDriverLink(driver)}
+                                        className="size-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm"
+                                        title="Enviar Link de Acesso"
+                                    >
+                                        <span className="material-symbols-outlined text-xl">share</span>
+                                    </button>
                                     <button
                                         onClick={() => openWhatsApp(driver.phone)}
                                         className="size-10 bg-green-500/10 text-green-500 rounded-xl flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm"
@@ -153,20 +199,32 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver,
                             </div>
 
                             <div className="space-y-4 mb-6">
-                                <div className="bg-slate-50 dark:bg-[#0b141a] p-4 rounded-2xl flex justify-between items-center">
-                                    <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-slate-400">speed</span>
+                                <div className="bg-slate-50 dark:bg-[#0b141a] p-5 rounded-2xl space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-3">
+                                            <span className="material-symbols-outlined text-primary">speed</span>
+                                            <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">KM Atual</p>
+                                                <p className="text-sm font-black text-slate-900 dark:text-white">{driver.vehicle.currentKM} km</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowVehicleModal(driver.id)}
+                                            className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-lg"
+                                        >
+                                            ATUALIZAR
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 border-t border-slate-200 dark:border-white/5 pt-4">
                                         <div>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">KM Atual</p>
-                                            <p className="text-sm font-black text-slate-900 dark:text-white">{driver.vehicle.currentKM} km</p>
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">KM Início Turno</p>
+                                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{driver.vehicle.startShiftKM} km</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">KM Saída Turno</p>
+                                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{driver.vehicle.endShiftKM} km</p>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => setShowVehicleModal(driver.id)}
-                                        className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest"
-                                    >
-                                        ATUALIZAR
-                                    </button>
                                 </div>
 
                                 <div className="flex gap-3">
@@ -302,14 +360,34 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver,
                             </div>
 
                             <div className="space-y-6">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">KM Atual de Rodagem</label>
-                                    <input
-                                        type="number"
-                                        defaultValue={driver.vehicle.currentKM}
-                                        onBlur={(e) => handleUpdateKM(driver.id, parseInt(e.target.value))}
-                                        className="w-full bg-slate-50 dark:bg-[#0b141a] border border-slate-100 dark:border-white/5 rounded-2xl p-4 outline-none focus:border-primary transition-all font-bold text-slate-900 dark:text-white"
-                                    />
+                                <div className="p-6 bg-slate-50 dark:bg-[#0b141a] rounded-[1.5rem] border border-slate-100 dark:border-white/5 space-y-6">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">KM Início do Turno</label>
+                                        <input
+                                            type="number"
+                                            defaultValue={driver.vehicle.startShiftKM}
+                                            onBlur={(e) => handleUpdateKM(driver.id, parseInt(e.target.value), 'start')}
+                                            className="w-full bg-white dark:bg-[#1a2c35] border border-slate-200 dark:border-white/5 rounded-xl p-3 outline-none focus:border-primary font-bold"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">KM Atual de Rodagem</label>
+                                        <input
+                                            type="number"
+                                            defaultValue={driver.vehicle.currentKM}
+                                            onBlur={(e) => handleUpdateKM(driver.id, parseInt(e.target.value), 'current')}
+                                            className="w-full bg-white dark:bg-[#1a2c35] border border-slate-200 dark:border-white/5 rounded-xl p-3 outline-none focus:border-primary font-bold"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">KM Saída do Turno</label>
+                                        <input
+                                            type="number"
+                                            defaultValue={driver.vehicle.endShiftKM}
+                                            onBlur={(e) => handleUpdateKM(driver.id, parseInt(e.target.value), 'end')}
+                                            className="w-full bg-white dark:bg-[#1a2c35] border border-slate-200 dark:border-white/5 rounded-xl p-3 outline-none focus:border-primary font-bold"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="p-6 bg-amber-500/5 rounded-[1.5rem] border border-amber-500/10 space-y-4">

@@ -6,9 +6,10 @@ interface OrderDetailProps {
   order: Order;
   onBack: () => void;
   onUpdateOrder: (order: Order) => void;
+  pixKey?: string;
 }
 
-const OrderDetailView: React.FC<OrderDetailProps> = ({ order, onBack, onUpdateOrder }) => {
+const OrderDetailView: React.FC<OrderDetailProps> = ({ order, onBack, onUpdateOrder, pixKey }) => {
   const [message, setMessage] = useState('');
 
   const total = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -147,6 +148,12 @@ const OrderDetailView: React.FC<OrderDetailProps> = ({ order, onBack, onUpdateOr
                   </div>
                   {order.changeFor && (
                     <p className="text-[10px] font-bold text-amber-600 mt-1">Troco p/ R$ {order.changeFor.toFixed(2)}</p>
+                  )}
+                  {order.paymentMethod === 'Pix' && pixKey && (
+                    <div className="mt-3 pt-3 border-t border-slate-200 dark:border-white/5">
+                      <p className="text-[10px] font-black text-primary uppercase mb-1">Pagar via PIX (Chave):</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-white select-all">{pixKey}</p>
+                    </div>
                   )}
                 </div>
               </div>

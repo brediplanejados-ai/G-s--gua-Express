@@ -10,6 +10,13 @@ interface SettingsProps {
   onUpdateWaNumbers: (nums: WhatsAppNumber[]) => void;
   backupConfig: BackupConfig;
   onUpdateBackup: (config: BackupConfig) => void;
+  pixKey: string;
+  onUpdatePix: (pix: string) => void;
+  adminLogin: string;
+  adminPassword: string;
+  onUpdateAdminCredentials: (login: string, pass: string) => void;
+  onImportBackup?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onUpdateLogo?: (logo: string | null) => void;
 }
 
 const SettingsView: React.FC<SettingsProps> = ({
@@ -20,12 +27,53 @@ const SettingsView: React.FC<SettingsProps> = ({
   waNumbers,
   onUpdateWaNumbers,
   backupConfig,
-  onUpdateBackup
+  onUpdateBackup,
+  pixKey,
+  onUpdatePix,
+  adminLogin,
+  adminPassword,
+  onUpdateAdminCredentials,
+  onImportBackup,
+  onUpdateLogo
 }) => {
   const [activeTab, setActiveTab] = useState<'perfil' | 'whatsapp' | 'backup'>('perfil');
   const [companyName, setCompanyName] = useState('Gás & Água Express LTDA');
   const [cnpj, setCnpj] = useState('12.345.678/0001-90');
-  const [address, setAddress] = useState('Av. Paulista, 1000 - Bela Vista, São Paulo - SP');
+  const [zipCode, setZipCode] = useState('01310-100');
+  const [street, setStreet] = useState('Av. Paulista');
+  const [number, setNumber] = useState('1000');
+  const [neighborhood, setNeighborhood] = useState('Bela Vista');
+  const [city, setCity] = useState('São Paulo');
+  const [logo, setLogo] = useState<string | null>(null);
+
+  const handleCepChange = async (cep: string) => {
+    const cleanedCep = cep.replace(/\D/g, '');
+    setZipCode(cleanedCep);
+    if (cleanedCep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanedCep}/json/`);
+        const data = await response.json();
+        if (!data.erro) {
+          setStreet(data.logradouro);
+          setNeighborhood(data.bairro);
+          setCity(data.localidade);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar CEP:', error);
+      }
+    }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const colors = [
     { name: 'Padrão (Azul)', value: '#13a4ec' },
@@ -94,19 +142,125 @@ const SettingsView: React.FC<SettingsProps> = ({
                     className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl p-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">CEP (Busca Auto)</label>
+                    <input
+                      type="text"
+                      value={zipCode}
+                      onChange={(e) => handleCepChange(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl p-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cidade</label>
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl p-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
+                    />
+                  </div>
+                </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Endereço Principal</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Rua / Logradouro</label>
                   <input
                     type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl p-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Número</label>
+                    <input
+                      type="text"
+                      value={number}
+                      onChange={(e) => setNumber(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl p-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Bairro</label>
+                    <input
+                      type="text"
+                      value={neighborhood}
+                      onChange={(e) => setNeighborhood(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl p-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Chave PIX do Estabelecimento</label>
+                  <div className="relative group">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">payments</span>
+                    <input
+                      type="text"
+                      value={pixKey}
+                      onChange={(e) => onUpdatePix(e.target.value)}
+                      placeholder="e-mail, CPF ou Aleatória"
+                      className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl py-4 pl-12 pr-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                {/* Seção de Segurança / Login */}
+                <div className="p-6 bg-amber-500/5 rounded-3xl border border-amber-500/10 space-y-4">
+                  <h4 className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm">lock_person</span>
+                    Segurança do Administrador
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2">Usuário de Login</label>
+                      <input
+                        type="text"
+                        value={adminLogin}
+                        readOnly
+                        className="w-full bg-slate-200/50 dark:bg-black/20 border-white/5 rounded-xl p-3 text-xs font-bold text-slate-500 cursor-not-allowed outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2">Trocar Senha</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          defaultValue={adminPassword}
+                          onBlur={(e) => onUpdateAdminCredentials(adminLogin, e.target.value)}
+                          className="w-full bg-white dark:bg-[#101c22] border-2 border-amber-500/20 rounded-xl p-3 text-xs font-black text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
+                        />
+                        <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-amber-500 text-sm">edit</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[8px] text-amber-600 font-bold leading-tight">
+                    * Alterar sua senha aqui também atualiza o acesso para o suporte do criador do sistema.
+                  </p>
+                </div>
               </div>
-              <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl group cursor-pointer hover:border-primary/50 transition-all">
-                <span className="material-symbols-outlined text-4xl text-slate-300 group-hover:text-primary transition-all mb-2">add_a_photo</span>
-                <span className="text-xs font-bold text-slate-400 group-hover:text-primary transition-all">Logotipo da Empresa</span>
+              <div className="relative">
+                <input
+                  type="file"
+                  id="logo-upload"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="logo-upload"
+                  className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl group cursor-pointer hover:border-primary/50 transition-all min-h-[300px] w-full overflow-hidden bg-slate-50/50 dark:bg-black/10"
+                >
+                  {logo ? (
+                    <img src={logo} alt="Logo" className="w-full h-full object-contain mb-4" />
+                  ) : (
+                    <span className="material-symbols-outlined text-4xl text-slate-300 group-hover:text-primary transition-all mb-2">add_a_photo</span>
+                  )}
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-primary transition-all">
+                    {logo ? 'Trocar Logotipo' : 'Logotipo da Empresa'}
+                  </span>
+                  <p className="text-[9px] text-slate-400 mt-2">Clique p/ Galeria ou Câmera</p>
+                </label>
               </div>
             </div>
           </section>
@@ -219,7 +373,7 @@ const SettingsView: React.FC<SettingsProps> = ({
                 </div>
                 <button
                   onClick={() => {
-                    const data = { autoMessages, waNumbers, companyName, cnpj, address, backupConfig };
+                    const data = { autoMessages, waNumbers, companyName, cnpj, zipCode, street, number, neighborhood, city, backupConfig };
                     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
@@ -233,6 +387,23 @@ const SettingsView: React.FC<SettingsProps> = ({
                   <span className="material-symbols-outlined text-sm">download</span>
                   Baixar Backup Agora
                 </button>
+
+                <div className="mt-4">
+                  <input
+                    type="file"
+                    id="import-backup"
+                    accept=".json"
+                    onChange={onImportBackup}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="import-backup"
+                    className="w-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-300 dark:hover:bg-slate-600 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm">upload</span>
+                    Importar Backup (JSON)
+                  </label>
+                </div>
               </div>
 
               <div className="p-8 bg-slate-50 dark:bg-[#101c22] rounded-[2rem] border-2 border-slate-100 dark:border-white/5 relative overflow-hidden">

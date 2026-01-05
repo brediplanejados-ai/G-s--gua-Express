@@ -11,9 +11,18 @@ interface SidebarProps {
   userName: string;
   userRole: string;
   pendingOrdersCount: number;
+  onInstallApp?: () => void;
+  showInstallButton?: boolean;
+  globalLogo?: string | null;
+  onSaveToDatabase?: () => void;
+  isSyncing?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, toggleDarkMode, isDarkMode, onLogout, userName, userRole, pendingOrdersCount }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  currentView, setView, toggleDarkMode, isDarkMode, onLogout,
+  userName, userRole, pendingOrdersCount, onInstallApp,
+  showInstallButton, globalLogo, onSaveToDatabase, isSyncing
+}) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
     { id: 'orders', label: 'Pedidos', icon: 'shopping_bag', count: pendingOrdersCount },
@@ -33,41 +42,53 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, toggleDarkMode,
         {/* Brand */}
         <div className="p-6 pb-2">
           <div className="flex gap-3 items-center mb-6">
-            <div className="bg-primary/10 rounded-full size-10 shrink-0 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined icon-fill">local_fire_department</span>
-            </div>
+            {globalLogo ? (
+              <img src={globalLogo} alt="Logo" className="h-10 object-contain" />
+            ) : (
+              <div className="bg-primary/10 rounded-full size-10 shrink-0 flex items-center justify-center text-primary">
+                <span className="material-symbols-outlined icon-fill">local_fire_department</span>
+              </div>
+            )}
             <div className="flex flex-col">
-              <h1 className="text-slate-900 dark:text-white text-base font-bold leading-normal">Gás & Água Express</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-xs font-normal">Painel Administrativo</p>
+              <h1 className="text-slate-900 dark:text-white text-lg font-black leading-tight tracking-tight">Gás & Água Express</h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Painel Administrativo</p>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 flex flex-col gap-1 overflow-y-auto">
-          {menuItems.filter(item => !item.adminOnly || userRole === 'admin').map((item) => (
+        <nav className="flex-1 px-3 flex flex-col gap-1 overflow-y-auto sidebar-scroll">
+          {menuItems.filter(item => {
+            if (userRole === 'driver') {
+              return item.id === 'driver-panel';
+            }
+            if (item.adminOnly) {
+              return userRole === 'admin';
+            }
+            return item.id !== 'driver-panel'; // Hide driver panel from admins/operators to keep it clean
+          }).map((item) => (
             <button
               key={item.id}
               onClick={() => setView(item.id as View)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${currentView === item.id || (item.id === 'orders' && currentView === 'dashboard')
-                ? 'bg-primary/10 text-primary'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+              className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all group ${currentView === item.id || (item.id === 'orders' && currentView === 'dashboard')
+                ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
+                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:scale-[1.01]'
                 }`}
             >
-              <span className={`material-symbols-outlined ${currentView === item.id || (item.id === 'orders' && currentView === 'dashboard')
+              <span className={`material-symbols-outlined text-[22px] ${currentView === item.id || (item.id === 'orders' && currentView === 'dashboard')
                 ? 'icon-fill'
                 : 'text-slate-400 group-hover:text-primary'
                 }`}>
                 {item.icon}
               </span>
-              <span className={`text-sm ${currentView === item.id || (item.id === 'orders' && currentView === 'dashboard')
-                ? 'font-bold'
-                : 'font-medium'
+              <span className={`text-[15px] ${currentView === item.id || (item.id === 'orders' && currentView === 'dashboard')
+                ? 'font-black uppercase tracking-tight'
+                : 'font-bold'
                 }`}>
                 {item.label}
               </span>
               {item.count && (
-                <span className="ml-auto bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <span className={`ml-auto ${currentView === item.id ? 'bg-white text-primary' : 'bg-primary text-white'} text-[10px] font-black px-2 py-0.5 rounded-full`}>
                   {item.count}
                 </span>
               )}
@@ -86,6 +107,34 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, toggleDarkMode,
             </span>
             <span className="text-sm font-medium">{isDarkMode ? 'Modo Claro' : 'Modo Escuro'}</span>
           </button>
+
+          {onSaveToDatabase && (
+            <button
+              onClick={onSaveToDatabase}
+              disabled={isSyncing}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full mt-1 ${isSyncing
+                ? 'bg-primary/10 text-primary cursor-wait'
+                : 'bg-primary/10 text-primary hover:bg-primary/20'
+                }`}
+            >
+              <span className={`material-symbols-outlined font-black ${isSyncing ? 'animate-spin' : ''}`}>
+                {isSyncing ? 'sync' : 'cloud_upload'}
+              </span>
+              <span className="text-sm font-black uppercase tracking-tight">
+                {isSyncing ? 'Salvando...' : 'Salvar na Nuvem'}
+              </span>
+            </button>
+          )}
+
+          {showInstallButton && onInstallApp && (
+            <button
+              onClick={onInstallApp}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-all w-full animate-bounce mt-1"
+            >
+              <span className="material-symbols-outlined font-black">download_for_offline</span>
+              <span className="text-sm font-black uppercase tracking-tight">Instalar App</span>
+            </button>
+          )}
 
           <button
             onClick={() => setView('settings')}
@@ -119,6 +168,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, toggleDarkMode,
             >
               <span className="material-symbols-outlined text-sm">logout</span>
             </button>
+          </div>
+
+          <div className="mt-4 px-3 pb-2 text-center">
+            <p className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em]">Desenvolvido por</p>
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="material-symbols-outlined text-[12px] text-green-500 font-black">chat</span>
+              <p className="text-[10px] font-black text-slate-500 dark:text-slate-400">Agência Bredi • 15 998148402</p>
+            </div>
           </div>
         </div>
       </div>

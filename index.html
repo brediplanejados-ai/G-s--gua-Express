@@ -87,23 +87,77 @@
             scrollbar-width: none;
         }
     </style>
-    <script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
-  }
-}
-</script>
     <link rel="stylesheet" href="/index.css">
+    <style>
+        #app-error-ui {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #f8fafc;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+            z-index: 9999;
+        }
+    </style>
 </head>
 
-<body
-    class="bg-background-light dark:bg-background-dark text-text-main dark:text-white font-display overflow-hidden h-screen">
+<body class="bg-background-light dark:bg-background-dark text-text-main dark:text-white font-display">
     <div id="root"></div>
+
+    <!-- Fail-safe UI -->
+    <div id="app-error-ui">
+        <h2 style="color: #1e293b; margin-bottom: 10px;">Ops! Ocorreu um erro ao carregar.</h2>
+        <p style="color: #64748b; margin-bottom: 20px;">Isso pode acontecer por cache antigo no seu navegador.</p>
+        <button onclick="localStorage.clear(); sessionStorage.clear(); location.reload(true);"
+            style="background: #13a4ec; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: bold; cursor: pointer;">
+            Limpar Cache e Recarregar
+        </button>
+    </div>
+
     <script type="module" src="/index.tsx"></script>
+
+    <script>
+        // Se após 5 segundos o app não estiver no ar, mostra a UI de erro
+        setTimeout(() => {
+            const root = document.getElementById('root');
+            // Se o root estiver vazio, algo deu errado (Provavelmente erro de chunk do Vite)
+            if (root && root.children.length === 0) {
+                document.getElementById('app-error-ui').style.display = 'flex';
+            }
+        }, 5000);
+
+        // Listener global para capturar erros de carregamento de arquivo (Chunk Load Error)
+        window.addEventListener('error', (e) => {
+            if (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK') {
+                document.getElementById('app-error-ui').style.display = 'flex';
+            }
+        }, true);
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
+                    // Check if there's already a waiting worker (update already downloaded)
+                    if (reg.waiting) {
+                        window.dispatchEvent(new CustomEvent('pwa-update-available'));
+                    }
+
+                    reg.onupdatefound = () => {
+                        const installingWorker = reg.installing;
+                        installingWorker.onstatechange = () => {
+                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Notifica que há atualização disponível e baixada
+                                window.dispatchEvent(new CustomEvent('pwa-update-available'));
+                            }
+                        };
+                    };
+                });
+            });
+        }
+    </script>
 </body>
 
 </html>

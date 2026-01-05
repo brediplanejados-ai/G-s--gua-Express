@@ -3,19 +3,25 @@ import React, { useState } from 'react';
 import { AdminUser, Driver } from '../types';
 
 interface LoginViewProps {
-    onLogin: (credentials: { login: string; pass: string; type: 'admin' | 'driver' }) => void;
+    onLogin: (credentials: { login: string; pass: string; type: 'admin' | 'driver' | 'creator'; tenantId?: string }) => void;
+    globalLogo: string | null;
 }
 
-const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
-    const [loginType, setLoginType] = useState<'admin' | 'driver'>('admin');
+const LoginView: React.FC<LoginViewProps> = ({ onLogin, globalLogo }) => {
+    const [loginType] = useState<'admin' | 'driver'>('admin');
     const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const [showForgot, setShowForgot] = useState(false);
     const [recoveryEmail, setRecoveryEmail] = useState('');
+    const [tenantId, setTenantId] = useState('t1');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onLogin({ login, pass: password, type: loginType });
+        if (!login || !password || !tenantId) {
+            alert('Por favor, preencha todos os campos.');
+            return;
+        }
+        onLogin({ login, pass: password, type: loginType, tenantId });
     };
 
     const handleRecovery = (e: React.FormEvent) => {
@@ -25,42 +31,49 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0b141a] flex items-center justify-center p-4 font-body">
-            <div className="max-w-md w-full animate-in fade-in zoom-in duration-500">
-                {/* Logo/Header */}
-                <div className="text-center mb-8">
-                    <div className="size-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary mx-auto mb-6 shadow-2xl shadow-primary/20">
-                        <span className="material-symbols-outlined text-5xl icon-fill">local_fire_department</span>
-                    </div>
-                    <h1 className="text-3xl font-black text-white tracking-tight">Gás & Água Express</h1>
-                    <p className="text-slate-500 font-bold mt-2 uppercase text-[10px] tracking-widest">Tecnologia Logística Digital</p>
+        <div className="min-h-[100dvh] w-full bg-[#0b141a] flex items-center justify-center p-4 lg:p-8 overflow-y-auto scrollbar-hide py-10">
+            <div className="w-full max-w-[420px] animate-in fade-in zoom-in-95 duration-700 flex flex-col items-center">
+                {/* Logo e Header */}
+                <div className="text-center mb-8 lg:mb-12">
+                    {globalLogo ? (
+                        <img src={globalLogo} alt="Logo" className="h-16 lg:h-20 object-contain mx-auto mb-6" />
+                    ) : (
+                        <div className="size-16 lg:size-20 bg-primary/20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/20">
+                            <span className="material-symbols-outlined text-primary text-4xl lg:text-5xl">water_drop</span>
+                        </div>
+                    )}
+                    <h1 className="text-3xl lg:text-4xl font-black text-white tracking-tight mb-2">Gás & Água Express</h1>
+                    <p className="text-primary font-black text-[10px] lg:text-xs uppercase tracking-[0.3em] opacity-80">Tecnologia Logística Digital</p>
                 </div>
 
-                <div className="bg-[#1a2c35] rounded-[2.5rem] p-8 shadow-2xl border border-white/5 relative overflow-hidden">
+                {/* Card de Login */}
+                <div className="w-full bg-[#1a2c35] p-6 lg:p-10 rounded-[2.5rem] border border-white/5 shadow-2xl shadow-black/50 relative overflow-hidden backdrop-blur-sm">
                     {/* Glassmorphism accent */}
                     <div className="absolute top-0 right-0 size-32 bg-primary/10 blur-3xl -mr-16 -mt-16 rounded-full"></div>
 
                     {!showForgot ? (
                         <>
-                            {/* Type Switcher */}
-                            <div className="flex bg-[#0b141a] p-1.5 rounded-2xl mb-8 relative z-10">
-                                <button
-                                    onClick={() => setLoginType('admin')}
-                                    className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${loginType === 'admin' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
-                                        }`}
-                                >
-                                    ADMINISTRATIVO
-                                </button>
-                                <button
-                                    onClick={() => setLoginType('driver')}
-                                    className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${loginType === 'driver' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
-                                        }`}
-                                >
-                                    ENTREGADOR
-                                </button>
+                            <div className="text-center mb-8 relative z-10">
+                                <h2 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Acesso Restrito</h2>
+                                <div className="h-1 w-12 bg-primary mx-auto rounded-full"></div>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">ID da Empresa / Estabelecimento</label>
+                                    <div className="relative group">
+                                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">domain</span>
+                                        <input
+                                            type="text"
+                                            value={tenantId}
+                                            onChange={(e) => setTenantId(e.target.value)}
+                                            placeholder="ex: t1, empresa_abc"
+                                            className="w-full bg-[#0b141a] border border-white/5 focus:border-primary/50 text-white rounded-2xl py-4 pl-12 pr-4 outline-none transition-all font-bold placeholder:text-slate-700 uppercase"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Usuário / Login</label>
                                     <div className="relative group">
@@ -102,7 +115,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
                                 <button
                                     type="submit"
-                                    className="w-full bg-primary hover:bg-primary/90 text-white py-5 rounded-[1.5rem] font-black text-lg shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-3 mt-4"
+                                    className="w-full bg-primary hover:bg-primary/95 text-white py-4 lg:py-5 rounded-[1.5rem] font-black text-base lg:text-lg shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-3 mt-4"
                                 >
                                     <span className="material-symbols-outlined">login</span>
                                     ENTRAR NO SISTEMA
@@ -152,9 +165,33 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     )}
                 </div>
 
-                <p className="text-center text-slate-500 text-[10px] font-bold mt-8 uppercase tracking-[0.2em] opacity-50">
-                    © 2026 LOGÍSTICA EXPRESS • VERSÃO 2.4.0
-                </p>
+                <div className="mt-12 flex flex-col items-center gap-6">
+                    <button
+                        onClick={() => {
+                            const masterPass = prompt('Digite a Chave de Mestre do Criador:');
+                            if (masterPass === 'antigravity-master-2026') {
+                                onLogin({ login: 'creator', pass: masterPass, type: 'creator' });
+                            } else if (masterPass) {
+                                alert('Chave Inválida');
+                            }
+                        }}
+                        className="group flex items-center gap-3 px-6 py-2.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined text-sm text-slate-500 group-hover:text-primary transition-colors">lock_person</span>
+                        <span className="text-[10px] font-black text-slate-500 group-hover:text-slate-200 uppercase tracking-[0.2em] transition-colors">
+                            Painel do Criador
+                        </span>
+                    </button>
+
+                    <div className="flex flex-col items-center gap-1 opacity-20">
+                        <p className="text-slate-500 text-[8px] font-black uppercase tracking-[0.4em]">
+                            LOGÍSTICA EXPRESS • SOFTWARE AS A SERVICE
+                        </p>
+                        <p className="text-slate-500 text-[7px] font-bold uppercase tracking-[0.3em]">
+                            VERSÃO 2.12.0 PLATINUM
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );

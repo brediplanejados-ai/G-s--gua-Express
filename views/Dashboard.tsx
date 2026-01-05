@@ -9,9 +9,10 @@ interface DashboardProps {
   onAddOrder: (order: Order) => void;
   products: Product[];
   onAddProduct: (product: Product) => void;
+  pixKey?: string;
 }
 
-const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOrder, onAddOrder, products, onAddProduct }) => {
+const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOrder, onAddOrder, products, onAddProduct, pixKey }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [clientSearch, setClientSearch] = useState('');
   const [showClientResults, setShowClientResults] = useState(false);
@@ -25,8 +26,32 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
   const [notes, setNotes] = useState('');
   const [manualCustomerName, setManualCustomerName] = useState('');
   const [manualPhone, setManualPhone] = useState('');
-  const [manualAddress, setManualAddress] = useState('');
+  const [manualZipCode, setManualZipCode] = useState('');
+  const [manualStreet, setManualStreet] = useState('');
+  const [manualNumber, setManualNumber] = useState('');
+  const [manualNeighborhood, setManualNeighborhood] = useState('');
+  const [manualCity, setManualCity] = useState('');
+  const [manualComplement, setManualComplement] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState<'hoje' | 'semanal' | 'mensal' | 'anual'>('hoje');
+
+  const handleCepChange = async (cep: string) => {
+    const cleanedCep = cep.replace(/\D/g, '');
+    setManualZipCode(cleanedCep);
+
+    if (cleanedCep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanedCep}/json/`);
+        const data = await response.json();
+        if (!data.erro) {
+          setManualStreet(data.logradouro);
+          setManualNeighborhood(data.bairro);
+          setManualCity(data.localidade);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar CEP:', error);
+      }
+    }
+  };
   const [referenceDate, setReferenceDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Wallet specific
@@ -40,9 +65,7 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
   });
 
   // Cálculo dinâmico do total para o modal
-  const currentTotal = newOrderItems.length > 0
-    ? newOrderItems.reduce((acc, i) => acc + i.price * i.quantity, 0)
-    : 120; // Default P13 total se nada selecionado
+  const currentTotal = newOrderItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
   const handleAddItem = (name: string, price: number) => {
     const existing = newOrderItems.find(i => i.name === name);
@@ -50,6 +73,15 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
       setNewOrderItems(newOrderItems.map(i => i.name === name ? { ...i, quantity: i.quantity + 1 } : i));
     } else {
       setNewOrderItems([...newOrderItems, { name, quantity: 1, price }]);
+    }
+  };
+
+  const handleRemoveItem = (name: string) => {
+    const existing = newOrderItems.find(i => i.name === name);
+    if (existing && existing.quantity > 1) {
+      setNewOrderItems(newOrderItems.map(i => i.name === name ? { ...i, quantity: i.quantity - 1 } : i));
+    } else {
+      setNewOrderItems(newOrderItems.filter(i => i.name !== name));
     }
   };
 
@@ -87,18 +119,25 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
   );
 
   const handleCreateOrder = (customer: Customer | null) => {
-    const defaultItems: OrderItem[] = [{ name: 'P13', quantity: 1, price: 120 }];
-    const total = defaultItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    if (newOrderItems.length === 0) {
+      alert("Por favor, adicione pelo menos um item ao pedido.");
+      return;
+    }
 
     const newOrder: Order = {
       id: `#${Math.floor(Math.random() * 9000) + 1000}`,
+      tenantId: 't1', // Será definido pelo App.tsx
       customerName: customer ? customer.name : manualCustomerName || 'Novo Cliente',
       phone: customer ? customer.phone : manualPhone || '(00) 00000-0000',
-      address: customer ? customer.address : manualAddress || '',
-      neighborhood: customer ? customer.neighborhood : '',
-      city: customer ? customer.city : '',
+      zipCode: customer ? customer.zipCode : manualZipCode,
+      street: customer ? customer.street : manualStreet,
+      number: customer ? customer.number : manualNumber,
+      neighborhood: customer ? customer.neighborhood : manualNeighborhood,
+      city: customer ? customer.city : manualCity,
+      complement: customer ? customer.complement : manualComplement,
+      address: customer ? customer.address : `${manualStreet}, ${manualNumber}`,
       avatar: customer ? customer.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(manualCustomerName || 'NC')}&background=random`,
-      items: newOrderItems.length > 0 ? newOrderItems : defaultItems,
+      items: newOrderItems,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       date: new Date().toISOString().split('T')[0],
       status: OrderStatus.PENDING,
@@ -106,7 +145,7 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
       paymentMethod,
       deliveryType,
       notes,
-      total: newOrderItems.length > 0 ? newOrderItems.reduce((acc, i) => acc + i.price * i.quantity, 0) : total
+      total: currentTotal
     };
 
     onAddOrder(newOrder);
@@ -116,7 +155,12 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
     setSelectedCustomer(null);
     setManualCustomerName('');
     setManualPhone('');
-    setManualAddress('');
+    setManualZipCode('');
+    setManualStreet('');
+    setManualNumber('');
+    setManualNeighborhood('');
+    setManualCity('');
+    setManualComplement('');
     setNotes('');
   };
 
@@ -261,15 +305,7 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
               <h2 className="text-slate-900 dark:text-white text-3xl font-extrabold leading-tight tracking-tight uppercase">Dashboard Administrativo</h2>
-              <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 shadow-sm shadow-emerald-500/10">
-                <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                PRONTO PARA PEDIDOS REAIS
-              </div>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-base font-bold flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm font-black">support_agent</span>
-              Central de Atendimento: <span className="text-primary font-black">(11) 98765-4321</span>
-            </p>
           </div>
           <div className="flex gap-3">
             <button className="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-white dark:bg-slate-800 border border-[#dbe2e6] dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
@@ -331,10 +367,11 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard title={`Total ${selectedPeriod}`} value={totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} change={`Lucro: ${totalProfit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`} type="positive" icon="payments" />
+            <StatCard title="Clientes" value={customers.length.toString()} icon="groups" type="primary" />
             <StatCard title="Pendentes" value={ordersByPeriod.filter(o => o.status === OrderStatus.PENDING).length.toString()} icon="schedule" type="warning" />
-            <StatCard title="Em Entrega" value={ordersByPeriod.filter(o => o.status === OrderStatus.ON_ROUTE || o.status === OrderStatus.ARRIVED || o.status === OrderStatus.ACCEPTED).length.toString()} icon="motorcycle" type="primary" />
+            <StatCard title="Em Rota" value={ordersByPeriod.filter(o => o.status === OrderStatus.ON_ROUTE || o.status === OrderStatus.ARRIVED || o.status === OrderStatus.ACCEPTED).length.toString()} icon="motorcycle" type="primary" />
             <StatCard title="Concluídos" value={ordersByPeriod.filter(o => o.status === OrderStatus.DELIVERED).length.toString()} icon="verified" type="success" />
           </div>
         </div>
@@ -376,40 +413,68 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
 
                 const max = Math.max(...data.map(d => d.total), 1);
 
-                // Para barra horizontal, vamos mostrar os dados que tem valor ou os últimos 10
+                // Melhorando displayData para o Gráfico de Ondas
                 let displayData = data.map((d, i) => ({ ...d, label: i }));
                 if (selectedPeriod === 'hoje') {
-                  // Mostrar apenas horas com vendas ou as últimas 6
-                  displayData = displayData.filter(d => d.total > 0).slice(-6);
-                  if (displayData.length === 0) displayData = data.slice(new Date().getHours() - 3, new Date().getHours() + 1).map((d, i) => ({ ...d, label: i }));
+                  const now = new Date().getHours();
+                  displayData = data.slice(Math.max(0, now - 6), now + 1).map((d, i) => ({ ...d, label: Math.max(0, now - 6) + i }));
                 } else if (selectedPeriod === 'semanal') {
                   displayData = displayData.slice(0, 7);
                 } else {
                   displayData = displayData.filter(d => d.total > 0).slice(-7);
                 }
 
-                return displayData.map((val, i) => {
-                  const label = selectedPeriod === 'semanal'
-                    ? ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][val.label as number]
-                    : selectedPeriod === 'hoje' ? `${val.label}h` : `Dia ${val.label + 1}`;
-
-                  return (
-                    <div key={i} className="flex items-center gap-4 group">
-                      <div className="w-12 text-[10px] font-black text-slate-400 uppercase tracking-tighter shrink-0">{label}</div>
-                      <div className="flex-1 h-6 bg-slate-50 dark:bg-slate-900/50 rounded-full overflow-hidden flex relative">
-                        <div className="flex h-full transition-all duration-1000 ease-out" style={{ width: `${(val.total / max) * 100}%` }}>
-                          <div className="bg-primary h-full transition-all" style={{ width: `${(val.Pix / val.total || 0) * 100}%` }} title={`Pix: R$ ${val.Pix}`}></div>
-                          <div className="bg-cyan-500 h-full transition-all" style={{ width: `${(val.Cartão / val.total || 0) * 100}%` }} title={`Cartão: R$ ${val.Cartão}`}></div>
-                          <div className="bg-emerald-500 h-full transition-all" style={{ width: `${(val.Dinheiro / val.total || 0) * 100}%` }} title={`Dinheiro: R$ ${val.Dinheiro}`}></div>
-                          <div className="bg-amber-500 h-full transition-all" style={{ width: `${(val.Carteira / val.total || 0) * 100}%` }} title={`Carteira: R$ ${val.Carteira}`}></div>
-                        </div>
-                      </div>
-                      <div className="w-20 text-right text-[10px] font-black text-slate-900 dark:text-white shrink-0">
-                        R$ {val.total.toFixed(0)}
-                      </div>
-                    </div>
-                  );
+                // Cálculo dos pontos da onda
+                const width = 400;
+                const height = 120;
+                const points = displayData.map((val, i) => {
+                  const x = (i / (displayData.length - 1)) * width;
+                  const y = height - (val.total / max) * height;
+                  return `${x},${y}`;
                 });
+
+                const pathData = `M ${points.join(' L ')}`;
+                const areaData = `${pathData} L ${width},${height} L 0,${height} Z`;
+
+                return (
+                  <div className="flex flex-col gap-6">
+                    <div className="relative h-32 w-full px-2">
+                      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="waveGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--primary-color)" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="var(--primary-color)" stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                        <path d={areaData} fill="url(#waveGradient)" className="transition-all duration-1000" />
+                        <path d={pathData} fill="none" stroke="var(--primary-color)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-1000" />
+
+                        {/* Pontos Interativos */}
+                        {displayData.map((val, i) => {
+                          const x = (i / (displayData.length - 1)) * width;
+                          const y = height - (val.total / max) * height;
+                          return (
+                            <circle key={i} cx={x} cy={y} r="4" fill="white" stroke="var(--primary-color)" strokeWidth="2" />
+                          );
+                        })}
+                      </svg>
+                    </div>
+
+                    <div className="flex justify-between px-2">
+                      {displayData.map((val, i) => {
+                        const label = selectedPeriod === 'semanal'
+                          ? ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][val.label as number]
+                          : selectedPeriod === 'hoje' ? `${val.label}h` : `${val.label + 1}`;
+                        return (
+                          <div key={i} className="flex flex-col items-center">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{label}</span>
+                            <span className="text-[10px] font-black text-slate-900 dark:text-white">R${val.total.toFixed(0)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
               })()}
             </div>
           </div>
@@ -432,18 +497,30 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
                 { name: 'Dinheiro', color: 'bg-emerald-500' }
               ];
 
-              const pixPct = Math.round(((counts['Pix'] || 0) / total) * 100);
-              const cardPct = Math.round(((counts['Cartão'] || 0) / total) * 100);
-              const walletPct = Math.round(((counts['Carteira'] || 0) / total) * 100);
-              const cashPct = Math.round(((counts['Dinheiro'] || 0) / total) * 100);
+              const pixPct = ((counts['Pix'] || 0) / total) * 100;
+              const cardPct = ((counts['Cartão'] || 0) / total) * 100;
+              const walletPct = ((counts['Carteira'] || 0) / total) * 100;
+              const cashPct = ((counts['Dinheiro'] || 0) / total) * 100;
+
+              // Conic gradient points
+              const p1 = pixPct;
+              const p2 = p1 + cardPct;
+              const p3 = p2 + walletPct;
+
+              const gradient = `conic-gradient(
+                var(--primary-color) 0% ${p1}%,
+                #06b6d4 ${p1}% ${p2}%,
+                #f59e0b ${p2}% ${p3}%,
+                #10b981 ${p3}% 100%
+              )`;
 
               return (
                 <div className="flex items-center gap-8 h-48">
-                  <div className="size-40 rounded-full border-[16px] border-primary/10 relative"
-                    style={{ borderTopColor: 'var(--primary-color)', borderRightColor: '#06b6d4' }}>
-                    <div className="absolute inset-0 flex items-center justify-center flex-col">
-                      <span className="text-xl font-black text-slate-900 dark:text-white">{pixPct + cardPct + walletPct}%</span>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">Digital</span>
+                  <div className="size-40 rounded-full relative flex items-center justify-center p-4">
+                    <div className="absolute inset-0 rounded-full" style={{ background: gradient, maskImage: 'radial-gradient(transparent 58%, black 60%)', WebkitMaskImage: 'radial-gradient(transparent 58%, black 60%)' }}></div>
+                    <div className="flex flex-col items-center z-10">
+                      <span className="text-xl font-black text-slate-900 dark:text-white">{Math.round(pixPct + cardPct + walletPct)}%</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Digital</span>
                     </div>
                   </div>
                   <div className="flex-1 space-y-3">
@@ -592,15 +669,57 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
                       onChange={(e) => setManualPhone(e.target.value)}
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Endereço</label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
-                      placeholder="Rua, Número"
-                      value={manualAddress}
-                      onChange={(e) => setManualAddress(e.target.value)}
-                    />
+                  <div className="grid grid-cols-6 gap-4 col-span-2">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CEP (Busca Automática)</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
+                        placeholder="00000-000"
+                        value={manualZipCode}
+                        onChange={(e) => handleCepChange(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rua / Logradouro</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
+                        placeholder="Nome da Rua"
+                        value={manualStreet}
+                        onChange={(e) => setManualStreet(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Número</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
+                        placeholder="123"
+                        value={manualNumber}
+                        onChange={(e) => setManualNumber(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Bairro</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
+                        placeholder="Bairro"
+                        value={manualNeighborhood}
+                        onChange={(e) => setManualNeighborhood(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cidade</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
+                        placeholder="Cidade"
+                        value={manualCity}
+                        onChange={(e) => setManualCity(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -629,11 +748,19 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
                 {newOrderItems.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-2">
                     {newOrderItems.map((item, idx) => (
-                      <span key={idx} className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                        {item.quantity}x {item.name} - R${(item.price * item.quantity).toFixed(0)}
-                      </span>
+                      <div key={idx} className="group relative flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in-95">
+                        <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">
+                          {item.quantity}x {item.name} - R${(item.price * item.quantity).toFixed(0)}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveItem(item.name)}
+                          className="ml-2 size-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[12px] font-black">remove</span>
+                        </button>
+                      </div>
                     ))}
-                    <button onClick={() => setNewOrderItems([])} className="text-[10px] font-black text-red-500 hover:underline uppercase tracking-widest pl-2">Limpar</button>
+                    <button onClick={() => setNewOrderItems([])} className="text-[10px] font-black text-red-500 hover:text-red-600 transition-colors uppercase tracking-widest px-2 self-center">Limpar Tudo</button>
                   </div>
                 )}
               </div>
@@ -696,6 +823,13 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
                       </button>
                     ))}
                   </div>
+                  {paymentMethod === 'Pix' && pixKey && (
+                    <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-xl animate-in zoom-in-95 duration-200">
+                      <p className="text-[10px] font-black text-primary uppercase mb-1">Pagar via PIX (Chave):</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white select-all">{pixKey}</p>
+                      <p className="text-[9px] font-bold text-slate-400 mt-1 italic">Clique para selecionar e copiar</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

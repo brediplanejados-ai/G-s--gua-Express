@@ -10,18 +10,34 @@ interface DriverDashboardProps {
 }
 
 const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateOrder, driver, onEndShift }) => {
+  const [showNewOrderModal, setShowNewOrderModal] = React.useState(false);
+  const [lastOrderAssignedId, setLastOrderAssignedId] = React.useState<string | null>(null);
+
   const currentDriverName = driver.name;
 
-  // Filter orders for this driver or pending orders they can accept
-  const myOrders = orders.filter(o => o.driver === currentDriverName || (o.status === OrderStatus.PENDING && !o.driver))
+  // Filter orders for this driver
+  const myOrders = orders.filter(o => o.driver === currentDriverName)
     .sort((a, b) => {
-      // Prioridade FIFO: Quem pediu primeiro (mais antigo primeiro)
       const dateA = new Date(`${a.date} ${a.timestamp}`).getTime();
       const dateB = new Date(`${b.date} ${b.timestamp}`).getTime();
       return dateA - dateB;
     });
 
   const activeOrder = myOrders.find(o => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED);
+
+  // Monitorar novos pedidos atribuídos
+  React.useEffect(() => {
+    const pendingAssignment = myOrders.find(o => o.status === OrderStatus.PENDING);
+    if (pendingAssignment && pendingAssignment.id !== lastOrderAssignedId) {
+      setLastOrderAssignedId(pendingAssignment.id);
+      setShowNewOrderModal(true);
+      // Som de notificação (opcional)
+      try {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+        audio.play();
+      } catch (e) { }
+    }
+  }, [myOrders, lastOrderAssignedId]);
 
   // Dinamização dos contadores
   const completedOrders = orders.filter(o => o.driver === currentDriverName && o.status === OrderStatus.DELIVERED);
@@ -385,6 +401,42 @@ const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateO
             )}
           </div>
         </section>
+
+        {/* Modal de Novo Pedido (Notificação Automática) */}
+        {showNewOrderModal && activeOrder && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-[#1a2c35] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-white/20 text-center animate-in zoom-in-95 duration-300">
+              <div className="size-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-primary ring-8 ring-primary/5">
+                <span className="material-symbols-outlined text-5xl animate-bounce">notifications_active</span>
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Nova Entrega!</h2>
+              <p className="text-slate-500 font-bold mb-6">Você recebeu um novo pedido de <span className="text-slate-900 dark:text-white">{activeOrder.customerName}</span> nas proximidades.</p>
+
+              <div className="bg-slate-50 dark:bg-[#101c22] p-4 rounded-2xl mb-8 text-left border border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Endereço</p>
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{activeOrder.address}</p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    handleUpdateStatus(OrderStatus.ACCEPTED);
+                    setShowNewOrderModal(false);
+                  }}
+                  className="w-full py-5 bg-primary hover:bg-primary-hover text-white rounded-2xl font-black text-lg shadow-xl shadow-primary/30 transition-all active:scale-95"
+                >
+                  ACEITAR ENTREGA
+                </button>
+                <button
+                  onClick={() => setShowNewOrderModal(false)}
+                  className="w-full py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  FECHAR
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
