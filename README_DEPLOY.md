@@ -5,8 +5,8 @@ O sistema já foi preparado para produção com isolamento multiusuário (SaaS) 
 ## 1. Dados do Banco de Dados (Supabase)
 O projeto já foi criado e as tabelas/políticas de segurança (RLS) já foram aplicadas.
 
-- **Project URL:** `https://tacphsytydcfugczcjfu.supabase.co`
-- **Anon Key:** `sb_publishable_wv84jEE3lHu0HgxgdUAqng_y0AOUiSR`
+- **Project URL:** `https://jzmxfhreazjyjdxkcyzo.supabase.co`
+- **Anon Key:** `sb_publishable_fWRczDAx-pMJTzibvPOCDw_MJ12U77H`
 
 ## 2. Como subir para o GitHub
 Como não tenho acesso direto para criar o repositório na sua conta web, você só precisa fazer isso:
