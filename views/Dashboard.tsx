@@ -912,7 +912,10 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
                 </button>
                 <button
                   onClick={() => {
-                    onAddProduct({ ...newProduct, id: 'p' + Date.now() });
+                    const id = 'p' + Date.now();
+                    const productToAdd = { ...newProduct, id };
+                    onAddProduct(productToAdd);
+                    handleAddItem(productToAdd.name, productToAdd.price);
                     setShowProductModal(false);
                     setNewProduct({ id: '', name: '', price: 0, category: 'Gás', icon: 'inventory_2' });
                   }}

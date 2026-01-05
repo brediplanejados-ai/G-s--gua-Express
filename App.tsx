@@ -11,7 +11,7 @@ import OrdersListView from './views/OrdersListView';
 import DriversListView from './views/DriversListView';
 import ClientsListView from './views/ClientsListView';
 import UsersListView from './views/UsersListView';
-import LoginView from './views/LoginView';
+import AuthView from './views/AuthView';
 import WhatsAppView from './views/WhatsAppView';
 import InventoryView from './views/InventoryView';
 import FinancialView from './views/FinancialView';
@@ -110,6 +110,32 @@ const App: React.FC = () => {
 
   // Efeito Global de Persistência Local
   useEffect(() => {
+    // Escutar mudanças na autenticação do Supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sbSession) => {
+      if (sbSession) {
+        // Quando logado no Supabase, atualizamos a sessão do App
+        const sessionData: AuthSession = {
+          user: {
+            id: sbSession.user.id,
+            email: sbSession.user.email || '',
+            name: sbSession.user.user_metadata?.full_name || 'Operador',
+            login: sbSession.user.email || '',
+            role: 'admin',
+            tenantId: 't1', // No futuro, buscar do admin_users via MCP/SQL
+            avatar: sbSession.user.user_metadata?.avatar_url || 'https://picsum.photos/seed/admin/40/40'
+          },
+          type: 'admin',
+          token: sbSession.access_token
+        };
+        setSession(sessionData);
+        localStorage.setItem('gas-session', JSON.stringify(sessionData));
+      } else {
+        // Quando deslogado
+        setSession(null);
+        localStorage.removeItem('gas-session');
+      }
+    });
+
     localStorage.setItem('gas-orders', JSON.stringify(orders));
     localStorage.setItem('gas-customers', JSON.stringify(customers));
     localStorage.setItem('gas-drivers', JSON.stringify(drivers));
@@ -129,15 +155,17 @@ const App: React.FC = () => {
     localStorage.setItem('gas-darkmode', isDarkMode.toString());
 
     if (session) {
-      localStorage.setItem('gas-session', JSON.stringify(session));
       // Auto-save debounced para nuvem quando dados críticos mudarem
       const timer = setTimeout(() => {
         handleSaveToCloudSilent();
       }, 5000);
-      return () => clearTimeout(timer);
-    } else {
-      localStorage.removeItem('gas-session');
+      return () => {
+        subscription.unsubscribe();
+        clearTimeout(timer);
+      };
     }
+
+    return () => subscription.unsubscribe();
   }, [orders, customers, drivers, admins, accessLogs, products, autoMessages, waNumbers, chatHistory, tenants, pixKey, currentView, activeDriverId, globalLogo, primaryColor, isDarkMode, session]);
 
   // Auto-login driver from URL
@@ -885,7 +913,10 @@ const App: React.FC = () => {
             onSelectOrder={handleSelectOrder}
             onAddOrder={handleAddOrder}
             products={filteredProducts}
-            onAddProduct={(p) => setProducts([...products, p])}
+            onAddProduct={(p) => {
+              const productWithTenant = { ...p, tenantId: session?.user?.tenantId || DEFAULT_TENANT_ID };
+              setProducts([...products, productWithTenant]);
+            }}
             pixKey={pixKey}
           />
         );
@@ -1042,7 +1073,28 @@ const App: React.FC = () => {
   };
 
   const renderAuth = () => {
-    return <LoginView onLogin={handleLogin} globalLogo={globalLogo} />;
+    return (
+      <AuthView
+        onLoginSuccess={(newSession) => {
+          const sessionData: AuthSession = {
+            user: {
+              id: newSession.user.id,
+              email: newSession.user.email || '',
+              name: newSession.user.user_metadata?.full_name || 'Operador',
+              login: newSession.user.email || '',
+              role: 'admin',
+              tenantId: 't1',
+              avatar: newSession.user.user_metadata?.avatar_url || 'https://picsum.photos/seed/admin/40/40'
+            },
+            type: 'admin',
+            token: newSession.access_token
+          };
+          setSession(sessionData);
+          localStorage.setItem('gas-session', JSON.stringify(sessionData));
+        }}
+        globalLogo={globalLogo}
+      />
+    );
   };
 
   if (!session) {
