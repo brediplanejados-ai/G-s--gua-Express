@@ -266,7 +266,7 @@ const App: React.FC = () => {
           token: 'MAGIC_LINK'
         });
         setActiveDriverId(user.id);
-        setCurrentView('dashboard');
+        setCurrentView('driver-panel');
         // Limpar URL para não re-logar ao recarregar
         window.history.replaceState({}, document.title, window.location.pathname);
       }
@@ -1514,7 +1514,7 @@ const App: React.FC = () => {
       )}
 
       {/* Sidebar - Agora com suporte a Mobile flutuante */}
-      {session.type === 'admin' && currentView !== 'super-admin' && (
+      {session && session.type === 'admin' && currentView !== 'super-admin' && (
         <>
           {/* Overlay para fechar menu ao clicar fora no mobile */}
           {isMenuOpen && (
@@ -1536,7 +1536,7 @@ const App: React.FC = () => {
               isDarkMode={isDarkMode}
               onLogout={handleLogout}
               userName={session.user.name}
-              userRole={session.type === 'admin' ? (session.user as AdminUser).role : 'driver'}
+              userRole={(session.user as any).role || 'driver'}
               pendingOrdersCount={filteredOrders.filter(o => o.status === OrderStatus.PENDING).length}
               onInstallApp={handleInstallApp}
               showInstallButton={!!deferredPrompt}
