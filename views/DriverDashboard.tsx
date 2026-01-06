@@ -13,16 +13,33 @@ interface DriverDashboardProps {
 
 const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateOrder, driver, onEndShift, onRefreshData, isSyncing }) => {
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  const [lastOrderId, setLastOrderId] = useState<string | null>(null);
 
-  // Filtrar pedidos atribuídos a este entregador que não foram entregues ou cancelados
+  // Som de Notificação
+  const playNotificationSound = () => {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.play().catch(e => console.log('Áudio bloqueado pelo navegador até interação.'));
+  };
+
+  // Filtrar pedidos atribuídos a este entregador
   useEffect(() => {
     const assigned = orders.find(o =>
       o.driver === driver.name &&
       o.status !== OrderStatus.DELIVERED &&
       o.status !== OrderStatus.CANCELLED
     );
+
+    // Tocar som se for um pedido novo que acabou de chegar
+    if (assigned && assigned.id !== lastOrderId) {
+      setLastOrderId(assigned.id);
+      if (assigned.status === OrderStatus.PENDING) {
+        playNotificationSound();
+        if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+      }
+    }
+
     setActiveOrder(assigned || null);
-  }, [orders, driver.name]);
+  }, [orders, driver.name, lastOrderId]);
 
   const today = new Date().toISOString().split('T')[0];
   const completedToday = orders.filter(o => o.driver === driver.name && o.status === OrderStatus.DELIVERED && o.date === today);
