@@ -183,7 +183,10 @@ const App: React.FC = () => {
     localStorage.setItem('gas-theme-color', primaryColor);
     localStorage.setItem('gas-darkmode', isDarkMode.toString());
     localStorage.setItem('gas-finance', JSON.stringify(financeTransactions));
+  }, [orders, customers, drivers, admins, accessLogs, products, autoMessages, waNumbers, chatHistory, tenants, pixKey, currentView, activeDriverId, globalLogo, primaryColor, isDarkMode, financeTransactions, backupConfig]);
 
+  // Timer de Splash Screen isolado
+  useEffect(() => {
     if (isAppLoading) {
       const interval = setInterval(() => {
         setLoadingProgress(prev => {
@@ -194,23 +197,45 @@ const App: React.FC = () => {
           }
           return prev + 1;
         });
-      }, 45); // ~5 seconds (100 * 45ms + small delay)
+      }, 35);
       return () => clearInterval(interval);
     }
+  }, [isAppLoading]);
 
-    if (session) {
-      // Auto-save debounced para nuvem quando dados críticos mudarem
-      const timer = setTimeout(() => {
-        handleSaveToCloudSilent();
-      }, 5000);
-      return () => {
-        subscription.unsubscribe();
-        clearTimeout(timer);
-      };
-    }
+  // Auth & Auto-save
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sbSession) => {
+      if (sbSession) {
+        const sessionData: AuthSession = {
+          user: {
+            id: sbSession.user.id,
+            email: sbSession.user.email || '',
+            name: sbSession.user.user_metadata?.full_name || 'Operador',
+            login: sbSession.user.email || '',
+            role: 'admin',
+            tenantId: 't1', // No futuro, buscar do admin_users via MCP/SQL
+            avatar: sbSession.user.user_metadata?.avatar_url || 'https://picsum.photos/seed/admin/40/40'
+          },
+          type: 'admin',
+          token: sbSession.access_token
+        };
+        setSession(sessionData);
+        localStorage.setItem('gas-session', JSON.stringify(sessionData));
+      } else {
+        setSession(null);
+        localStorage.removeItem('gas-session');
+      }
+    });
 
-    return () => subscription.unsubscribe();
-  }, [orders, customers, drivers, admins, accessLogs, products, autoMessages, waNumbers, chatHistory, tenants, pixKey, currentView, activeDriverId, globalLogo, primaryColor, isDarkMode, session]);
+    const timer = setTimeout(() => {
+      if (session) handleSaveToCloudSilent();
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
+  }, [session, orders, customers, products]);
 
   // Auto-login driver from URL
   useEffect(() => {
@@ -1402,7 +1427,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="absolute bottom-12 text-center z-10">
-            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Versão 3.1.0 • Agência Bredi</p>
+            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Versão 3.3.1 • MeuGás Digital</p>
           </div>
         </div>
       )}
