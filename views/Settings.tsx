@@ -258,6 +258,7 @@ const SettingsView: React.FC<SettingsProps> = ({
                   ) : (
                     <span className="material-symbols-outlined text-4xl text-slate-300 group-hover:text-primary transition-all mb-2">add_a_photo</span>
                   )}
+                  <h4 className="text-white text-base font-black uppercase tracking-tight italic">MeuGás Digital</h4>
                   <span className="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-primary transition-all">
                     {logo ? 'Trocar Logotipo' : 'Logotipo da Empresa'}
                   </span>

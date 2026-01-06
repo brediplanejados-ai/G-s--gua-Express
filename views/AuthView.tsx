@@ -46,7 +46,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, globalLogo }) => {
                             <span className="material-symbols-outlined text-primary text-5xl">water_drop</span>
                         </div>
                     )}
-                    <h1 className="text-3xl font-black text-white tracking-tight">Gás & Água Express</h1>
+                    <h1 className="text-white text-4xl font-black uppercase tracking-tighter mb-2 italic">MeuGás Digital</h1>
                     <p className="text-primary font-bold text-xs uppercase tracking-[0.3em] mt-2 opacity-60">SaaS Intelligence</p>
                 </div>
 

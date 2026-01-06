@@ -112,7 +112,7 @@ const App: React.FC = () => {
   const [tenants, setTenants] = useState<Tenant[]>(() => {
     const saved = localStorage.getItem('gas-tenants');
     if (saved) return JSON.parse(saved);
-    return [{ id: 't1', name: 'Gás & Água Express LTDA', plan: 'Pro', status: 'Ativo', adminLogin: 'admin', adminPassword: '123' }];
+    return [{ id: 't1', name: 'MeuGás Digital LTDA', plan: 'Pro', status: 'Ativo', adminLogin: 'admin', adminPassword: '123' }];
   });
   const [globalLogo, setGlobalLogo] = useState(() => localStorage.getItem('gas-global-logo') || null);
 
@@ -1354,7 +1354,7 @@ const App: React.FC = () => {
               <span className="material-symbols-outlined text-primary text-5xl icon-fill animate-bounce">local_fire_department</span>
             </div>
 
-            <h1 className="text-white text-3xl font-black uppercase tracking-tighter mb-2 italic">Gás & Água Express</h1>
+            <h1 className="text-white text-3xl font-black uppercase tracking-tighter mb-2 italic">MeuGás Digital</h1>
             <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mb-12">Carregando Ecossistema...</p>
 
             <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">

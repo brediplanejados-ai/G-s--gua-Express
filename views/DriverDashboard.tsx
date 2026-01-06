@@ -52,7 +52,7 @@ const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateO
       });
 
       // Simulação de Notificação WhatsApp
-      const message = `Olá ${activeOrder.customerName}, sua entrega do Gás & Água Express mudou para: *${status}*.`;
+      const message = `Olá ${activeOrder.customerName}, sua entrega do MeuGás Digital mudou para: *${status}*.`;
       console.log(`[WhatsApp Simulado para ${activeOrder.phone}]: ${message}`);
       // Abre o link do WhatsApp para o entregador enviar manualmente se necessário
       const waUrl = `https://wa.me/${activeOrder.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
@@ -233,6 +233,7 @@ const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateO
                       <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/20">Pedido Ativo</span>
                       <span className="text-slate-400 font-bold text-sm">{activeOrder.id}</span>
                     </div>
+                    <h1 className="text-2xl font-black text-white italic tracking-tighter">MEUGÁS DIGITAL</h1>
                     <h1 className="text-4xl font-black text-slate-900 dark:text-white leading-tight">
                       {activeOrder.customerName}
                     </h1>

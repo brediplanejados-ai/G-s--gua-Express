@@ -50,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
             <div className="flex flex-col">
-              <h1 className="text-slate-900 dark:text-white text-lg font-black leading-tight tracking-tight">Gás & Água Express</h1>
+              <h2 className="text-white text-base font-black uppercase leading-tight italic tracking-tighter">MeuGás<br />Digital</h2>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Painel Administrativo</p>
             </div>
           </div>
