@@ -6,9 +6,7 @@ import ProductModal from './components/ProductModal';
 import DashboardView from './views/Dashboard';
 import SettingsView from './views/Settings';
 import OrderDetailView from './views/OrderDetail';
-import DriverDashboardView from './views/DriverDashboard';
 import PlaceholderView from './views/PlaceholderView';
-import DriverSelectionView from './views/DriverSelection';
 import OrdersListView from './views/OrdersListView';
 import DriversListView from './views/DriversListView';
 import ClientsListView from './views/ClientsListView';
@@ -236,42 +234,6 @@ const App: React.FC = () => {
       clearTimeout(timer);
     };
   }, [session, orders, customers, products]);
-
-  // Auto-login driver from URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const dLogin = params.get('driverLogin');
-    const dPass = params.get('pass');
-    const dTenant = params.get('tenant');
-
-    if (dLogin && dPass && dTenant) {
-      const user = drivers.find(d =>
-        d.login === dLogin &&
-        d.password === dPass
-      );
-
-      if (user) {
-        console.log('✅ Auto-login via Link Mágico detectado para:', user.name);
-        setSession({
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            login: user.login,
-            role: 'driver',
-            tenantId: dTenant,
-            avatar: user.avatar
-          },
-          type: 'driver',
-          token: 'MAGIC_LINK'
-        });
-        setActiveDriverId(user.id);
-        setCurrentView('driver-panel');
-        // Limpar URL para não re-logar ao recarregar
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-  }, [drivers]);
 
   const handleSaveToCloudSilent = async () => {
     if (!session) return;
@@ -1360,41 +1322,7 @@ const App: React.FC = () => {
           />
         );
       case 'driver-panel':
-        // No painel do entregador, o admin tem acesso a todos os entregadores (seletor)
-        // O entregador logado vai direto para o dashboard dele
-        if (session?.type === 'driver') {
-          const activeDriver = filteredDrivers.find(d => d.id === session.user.id)!;
-          return (
-            <DriverDashboardView
-              orders={filteredOrders}
-              onUpdateOrder={handleUpdateOrder}
-              driver={activeDriver}
-              onEndShift={handleLogout}
-              onRefreshData={loadDataFromCloud}
-              isSyncing={isSyncing}
-            />
-          );
-        }
-
-        // Se for Admin acessando o painel de entregadores
-        if (!activeDriverId) {
-          return (
-            <DriverSelectionView
-              drivers={filteredDrivers}
-              onSelectDriver={(id) => setActiveDriverId(id)}
-              onBack={() => setCurrentView('dashboard')}
-            />
-          );
-        }
-        const selectedDriver = filteredDrivers.find(d => d.id === activeDriverId)!;
-        return (
-          <DriverDashboardView
-            orders={filteredOrders}
-            onUpdateOrder={handleUpdateOrder}
-            driver={selectedDriver}
-            onEndShift={() => setActiveDriverId(null)}
-          />
-        );
+        return <PlaceholderView title="Painel do Entregador Migrado" message="Esta funcionalidade agora reside em um aplicativo dedicado." icon="delivery_dining" />;
       case 'drivers':
         return (
           <DriversListView
@@ -1550,18 +1478,8 @@ const App: React.FC = () => {
       )}
 
       {/* Main Container */}
-      <div className={`flex-1 flex flex-col overflow-hidden relative ${session?.type === 'driver' || currentView === 'driver-panel' || currentView === 'super-admin' ? 'w-full' : ''}`}>
-        {session?.type !== 'driver' && renderContent()}
-        {session?.type === 'driver' && (
-          <DriverDashboardView
-            orders={filteredOrders}
-            onUpdateOrder={handleUpdateOrder}
-            driver={filteredDrivers.find(d => d.id === session.user.id)!}
-            onEndShift={handleLogout}
-            onRefreshData={loadDataFromCloud}
-            isSyncing={isSyncing}
-          />
-        )}
+      <div className={`flex-1 flex flex-col overflow-hidden relative ${currentView === 'super-admin' ? 'w-full' : ''}`}>
+        {renderContent()}
       </div>
 
       <ManualOrderModal

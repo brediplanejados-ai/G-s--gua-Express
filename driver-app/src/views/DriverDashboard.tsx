@@ -284,7 +284,7 @@ const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateO
                           {item.quantity}x
                         </div>
                         <div>
-                          <p className="text-sm font-black uppercase italic tracking-tighter">{item.productName}</p>
+                          <p className="text-sm font-black uppercase italic tracking-tighter">{item.name}</p>
                           <p className="text-[10px] font-bold text-slate-500 uppercase">Cód: #00{idx + 1}</p>
                         </div>
                       </div>

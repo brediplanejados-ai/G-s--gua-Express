@@ -132,7 +132,6 @@ export interface Driver {
     orderCount: number;
     totalEarnings: number;
   };
-  role?: 'driver';
   lat?: number;
   lng?: number;
 }

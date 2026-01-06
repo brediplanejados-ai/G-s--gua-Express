@@ -107,9 +107,10 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, orders, onAd
     };
 
     const shareDriverLink = (driver: Driver) => {
-        const baseUrl = window.location.origin;
-        const link = `${baseUrl}/?driverLogin=${driver.login}&pass=${driver.password}&tenant=${currentTenantId}`;
-        const message = `🔥 *OLÁ ${driver.name.toUpperCase()}!* 🔥\n\nBem-vindo ao time *MeuGás Digital*!\n\nAqui está o seu link de acesso exclusivo ao seu Painel de Entregas:\n\n🔗 ${link}\n\n*Ao abrir o link:*\n1. Clique em "Instalar App" para ter o MeuGás na tela inicial do seu celular.\n2. Seus pedidos aparecerão automaticamente.\n3. Lembre-se de ativar o GPS para o rastreio das entregas!\n\nBora subir o nível! 🚀`;
+        // Link para o novo App Dedicado (Substituir pela URL final do Vercel quando disponível)
+        const driverAppUrl = 'https://meugas-entregador.vercel.app';
+        const link = `${driverAppUrl}/?driverLogin=${driver.login}&pass=${driver.password}&tenant=${currentTenantId}`;
+        const message = `🔥 *OLÁ ${driver.name.toUpperCase()}!* 🔥\n\nBem-vindo ao novo App exclusivo *MeuGás Entregador*!\n\n🔗 ${link}\n\n*Novidades desta versão:*\n✅ Notificações Instantâneas\n✅ Alerta Sonoro de novo pedido\n✅ Mapa Integrado e GPS\n\nAbra o link e clique em "Instalar" para ter o App na sua tela inicial! 🚀`;
         const cleanPhone = driver.phone.replace(/\D/g, '');
         window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`, '_blank');
     };
