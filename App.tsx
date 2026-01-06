@@ -673,16 +673,18 @@ const App: React.FC = () => {
     window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('pwa-update-available', updateHandler);
 
-    // Verificação agressiva de atualização (A cada 30 segundos)
     const updateCheckInterval = setInterval(() => {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistration().then(reg => {
           if (reg) {
             reg.update(); // Força a verificação no servidor
+            if (reg.waiting) {
+              setShowUpdateAlert(true);
+            }
           }
         });
       }
-    }, 30000);
+    }, 15000); // Verificação mais frequente (15s)
 
     const onStateChange = (newWorker: any) => {
       if (newWorker.state === 'installed') {

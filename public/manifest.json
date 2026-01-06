@@ -21,5 +21,6 @@
     "start_url": "/?v=pwa",
     "display": "standalone",
     "theme_color": "#13a4ec",
-    "background_color": "#ffffff"
+    "background_color": "#ffffff",
+    "version": "2.14.0"
 }

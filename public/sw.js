@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gas-agua-express-v16'; // Increment v16
+const CACHE_NAME = 'gas-agua-express-v17'; // Incrementado para v17
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -20,32 +20,34 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    // Para navegação (HTML), tentamos a rede primeiro
-    if (event.request.mode === 'navigate') {
+    const { request } = event;
+    const url = new URL(request.url);
+
+    // Estratégia Network-First para o HTML principal e manifest
+    if (request.mode === 'navigate' || url.pathname.endsWith('manifest.json')) {
         event.respondWith(
-            fetch(event.request).catch(() => {
-                return caches.match('/index.html');
-            })
+            fetch(request)
+                .then((response) => {
+                    const copy = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+                    return response;
+                })
+                .catch(() => caches.match(request))
         );
         return;
     }
 
-    // Para outros arquivos, usamos Cache First com fallback para Rede
+    // Estratégia Stale-While-Revalidate para outros recursos (js, css, imagens)
     event.respondWith(
-        caches.match(event.request).then((response) => {
-            if (response) return response;
-            return fetch(event.request).then((networkResponse) => {
-                if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-                    return networkResponse;
+        caches.match(request).then((cachedResponse) => {
+            const fetchPromise = fetch(request).then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200) {
+                    const copy = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
                 }
-                const responseToCache = networkResponse.clone();
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, responseToCache);
-                });
                 return networkResponse;
             });
-        }).catch(() => {
-            // Se falhar rede e cache, não faz nada
+            return cachedResponse || fetchPromise;
         })
     );
 });
