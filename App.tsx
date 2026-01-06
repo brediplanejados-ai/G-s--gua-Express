@@ -1109,6 +1109,13 @@ const App: React.FC = () => {
     setDrivers(drivers.map(d => d.id === updatedDriver.id ? updatedDriver : d));
   };
 
+  const handleUpdateTenant = (updatedTenant: Tenant) => {
+    setTenants(tenants.map(t => t.id === updatedTenant.id ? updatedTenant : t));
+    // Se mudar o logotipo do tenant, atualiza o globalLogo também
+    if (updatedTenant.logo) setGlobalLogo(updatedTenant.logo);
+    // Persistência imediata no localStorage também é feita pelo useEffect global
+  };
+
   // Filtros de Tennant (SaaS)
   const filteredOrders = orders.filter(o => o.tenantId === session?.user?.tenantId);
   const filteredCustomers = customers.filter(c => c.tenantId === session?.user?.tenantId);
@@ -1164,6 +1171,8 @@ const App: React.FC = () => {
             onImportBackup={handleImportBackup}
             onDownloadBackup={handleDownloadBackup}
             onUpdateLogo={setGlobalLogo}
+            tenant={tenants.find(t => t.id === (session?.user?.tenantId || DEFAULT_TENANT_ID)) || tenants[0]}
+            onUpdateTenant={handleUpdateTenant}
           />
         );
       case 'whatsapp':

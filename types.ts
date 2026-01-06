@@ -187,6 +187,12 @@ export interface ChatMessage {
 export interface Tenant {
   id: string; // The Tenant ID used for login
   name: string;
+  cnpj?: string;
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
   plan: 'Free' | 'Pro' | 'Enterprise';
   status: 'Ativo' | 'Bloqueado';
   adminLogin: string;
@@ -199,6 +205,7 @@ export interface Tenant {
   storageEnabled: boolean;
   apiEnabled: boolean;
   databaseSize: string;
+  pixKey?: string;
 }
 
 export interface BackupConfig {

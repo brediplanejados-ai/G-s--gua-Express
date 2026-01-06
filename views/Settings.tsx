@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AutoMessage, WhatsAppNumber, BackupConfig } from '../types';
+import { AutoMessage, WhatsAppNumber, BackupConfig, Tenant } from '../types';
 
 interface SettingsProps {
   primaryColor: string;
@@ -18,6 +18,8 @@ interface SettingsProps {
   onImportBackup?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onDownloadBackup?: () => void;
   onUpdateLogo?: (logo: string | null) => void;
+  tenant: Tenant;
+  onUpdateTenant: (updated: Tenant) => void;
 }
 
 const SettingsView: React.FC<SettingsProps> = ({
@@ -36,17 +38,38 @@ const SettingsView: React.FC<SettingsProps> = ({
   onUpdateAdminCredentials,
   onImportBackup,
   onDownloadBackup,
-  onUpdateLogo
+  onUpdateLogo,
+  tenant,
+  onUpdateTenant
 }) => {
   const [activeTab, setActiveTab] = useState<'perfil' | 'whatsapp' | 'backup'>('perfil');
-  const [companyName, setCompanyName] = useState('Gás & Água Express LTDA');
-  const [cnpj, setCnpj] = useState('12.345.678/0001-90');
-  const [zipCode, setZipCode] = useState('01310-100');
-  const [street, setStreet] = useState('Av. Paulista');
-  const [number, setNumber] = useState('1000');
-  const [neighborhood, setNeighborhood] = useState('Bela Vista');
-  const [city, setCity] = useState('São Paulo');
-  const [logo, setLogo] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState(tenant.name);
+  const [cnpj, setCnpj] = useState(tenant.cnpj || '');
+  const [zipCode, setZipCode] = useState(tenant.zipCode || '');
+  const [street, setStreet] = useState(tenant.street || '');
+  const [number, setNumber] = useState(tenant.number || '');
+  const [neighborhood, setNeighborhood] = useState(tenant.neighborhood || '');
+  const [city, setCity] = useState(tenant.city || '');
+  const [logo, setLogo] = useState<string | null>(tenant.logo || null);
+  const [localPixKey, setLocalPixKey] = useState(pixKey);
+
+  const handleSave = () => {
+    const updatedTenant: Tenant = {
+      ...tenant,
+      name: companyName,
+      cnpj,
+      zipCode,
+      street,
+      number,
+      neighborhood,
+      city,
+      logo: logo || undefined,
+      pixKey: localPixKey
+    };
+    onUpdateTenant(updatedTenant);
+    onUpdatePix(localPixKey);
+    alert('Alterações salvas com sucesso!');
+  };
 
   const handleCepChange = async (cep: string) => {
     const cleanedCep = cep.replace(/\D/g, '');
@@ -199,8 +222,8 @@ const SettingsView: React.FC<SettingsProps> = ({
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">payments</span>
                     <input
                       type="text"
-                      value={pixKey}
-                      onChange={(e) => onUpdatePix(e.target.value)}
+                      value={localPixKey}
+                      onChange={(e) => setLocalPixKey(e.target.value)}
                       placeholder="e-mail, CPF ou Aleatória"
                       className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl py-4 pl-12 pr-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all shadow-inner"
                     />
@@ -266,6 +289,16 @@ const SettingsView: React.FC<SettingsProps> = ({
                 </label>
               </div>
             </div>
+
+            <div className="mt-8 flex justify-end">
+              <button
+                onClick={handleSave}
+                className="bg-primary hover:bg-primary/90 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 shadow-xl shadow-primary/20 transition-all active:scale-95"
+              >
+                <span className="material-symbols-outlined">save</span>
+                SALVAR ALTERAÇÕES
+              </button>
+            </div>
           </section>
 
           <section className="bg-white dark:bg-[#1a2c35] p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl shadow-slate-200/50">
@@ -319,11 +352,25 @@ const SettingsView: React.FC<SettingsProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <div className={`size-3 rounded-full ${num.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
-                    <button className="material-symbols-outlined text-slate-400 hover:text-red-500 transition-colors">delete</button>
+                    <button
+                      onClick={() => onUpdateWaNumbers(waNumbers.filter(n => n.id !== num.id))}
+                      className="material-symbols-outlined text-slate-400 hover:text-red-500 transition-colors"
+                    >
+                      delete
+                    </button>
                   </div>
                 </div>
               ))}
-              <button className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-slate-400 font-bold hover:border-primary hover:text-primary transition-all">
+              <button
+                onClick={() => {
+                  const number = prompt('Digite o número do WhatsApp (com DDD):');
+                  const label = prompt('Digite uma etiqueta (ex: Suporte, Vendas):');
+                  if (number && label) {
+                    onUpdateWaNumbers([...waNumbers, { id: 'wa' + Date.now(), number, label, status: 'active' }]);
+                  }
+                }}
+                className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-slate-400 font-bold hover:border-primary hover:text-primary transition-all"
+              >
                 <span className="material-symbols-outlined">add</span>
                 Novo Número
               </button>
@@ -355,6 +402,7 @@ const SettingsView: React.FC<SettingsProps> = ({
           </section>
         </div>
       )}
+
       {activeTab === 'backup' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <section className="bg-white dark:bg-[#1a2c35] p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl shadow-slate-200/50">
