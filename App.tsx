@@ -360,7 +360,7 @@ const App: React.FC = () => {
         })));
       }
       // Pequeno delay para o usuário ver o indicador de salvamento
-      setTimeout(() => setIsSaving(false), 2000);
+      setTimeout(() => setIsSaving(false), 1200);
       console.log('☁️ Nuvem sincronizada silenciosamente.');
     } catch (e) {
       console.error('Erro no auto-save cloud:', e);
@@ -519,6 +519,78 @@ const App: React.FC = () => {
   useEffect(() => {
     if (session) {
       loadDataFromCloud();
+
+      // --- CONFIGURAÇÃO SUPABASE REALTIME ---
+      const tenantId = session.user.tenantId || DEFAULT_TENANT_ID;
+
+      const channel = supabase
+        .channel('db_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
+          (payload) => {
+            console.log('🔔 Mudança em Pedido Detectada:', payload);
+            if (payload.eventType === 'INSERT') {
+              const newOrder: any = payload.new;
+              setOrders(prev => [
+                {
+                  id: newOrder.id,
+                  tenantId: newOrder.tenant_id,
+                  customerName: newOrder.customer_name,
+                  phone: newOrder.phone,
+                  zipCode: '',
+                  street: '',
+                  number: '',
+                  neighborhood: newOrder.neighborhood,
+                  city: newOrder.city,
+                  address: newOrder.address,
+                  items: newOrder.items as any,
+                  timestamp: newOrder.created_at,
+                  date: newOrder.date,
+                  status: newOrder.status as any,
+                  total: Number(newOrder.total),
+                  paymentMethod: newOrder.payment_method as any,
+                  deliveryType: 'Entrega',
+                  avatar: `https://i.pravatar.cc/150?u=${newOrder.customer_name}`,
+                  waitTime: '0 min'
+                },
+                ...prev.filter(o => o.id !== newOrder.id)
+              ]);
+            } else if (payload.eventType === 'UPDATE') {
+              const updated: any = payload.new;
+              setOrders(prev => prev.map(o => o.id === updated.id ? {
+                ...o,
+                status: updated.status as any,
+                driver: updated.driver
+              } : o));
+            } else if (payload.eventType === 'DELETE') {
+              setOrders(prev => prev.filter(o => o.id !== payload.old.id));
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'drivers', filter: `tenant_id=eq.${tenantId}` },
+          (payload) => {
+            console.log('🔔 Mudança em Entregador Detectada:', payload);
+            if (payload.eventType === 'UPDATE') {
+              const updated: any = payload.new;
+              setDrivers(prev => prev.map(d => d.id === updated.id ? {
+                ...d,
+                status: updated.status as any,
+                vehicle: {
+                  ...d.vehicle,
+                  currentKM: updated.current_km || d.vehicle.currentKM
+                }
+              } : d));
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [session?.user?.id]);
 
