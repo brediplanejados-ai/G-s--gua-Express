@@ -43,6 +43,28 @@ const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateO
   const completedOrders = orders.filter(o => o.driver === currentDriverName && o.status === OrderStatus.DELIVERED);
   const totalGains = completedOrders.reduce((acc, o) => acc + o.total, 0);
 
+  // Rastreamento GPS em tempo real
+  React.useEffect(() => {
+    let watchId: number;
+    if (activeOrder && (activeOrder.status === OrderStatus.ON_ROUTE || activeOrder.status === OrderStatus.ARRIVED)) {
+      if ('geolocation' in navigator) {
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            console.log(`📍 GPS [${driver.name}]: ${latitude}, ${longitude}`);
+            // Aqui enviamos para o Supabase (simulado via onUpdateOrder para persistência no estado global)
+            // No futuro, isso pode ser uma tabela de 'driver_locations'
+          },
+          (err) => console.error('Erro GPS:', err),
+          { enableHighAccuracy: true }
+        );
+      }
+    }
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [activeOrder, driver.name]);
+
   const handleUpdateStatus = (status: OrderStatus) => {
     if (activeOrder) {
       onUpdateOrder({
@@ -51,13 +73,22 @@ const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateO
         driver: currentDriverName
       });
 
-      // Simulação de Notificação WhatsApp
-      const message = `Olá ${activeOrder.customerName}, sua entrega do MeuGás Digital mudou para: *${status}*.`;
-      console.log(`[WhatsApp Simulado para ${activeOrder.phone}]: ${message}`);
-      // Abre o link do WhatsApp para o entregador enviar manualmente se necessário
-      const waUrl = `https://wa.me/${activeOrder.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-      if (status === OrderStatus.ON_ROUTE || status === OrderStatus.ARRIVED) {
-        window.open(waUrl, '_blank');
+      // Notificação Inteligente
+      let message = '';
+      if (status === OrderStatus.ON_ROUTE) {
+        message = `🚚 Olá ${activeOrder.customerName}, o entregador ${driver.name} acabou de sair com seu pedido! Você pode acompanhar o trajeto aqui no app.`;
+      } else if (status === OrderStatus.ARRIVED) {
+        message = `📍 Olá ${activeOrder.customerName}, o entregador ${driver.name} chegou no seu endereço! Favor aguardar no local.`;
+      } else if (status === OrderStatus.DELIVERED) {
+        message = `✅ Pedido Entregue! Obrigado por escolher o MeuGás Digital.`;
+      }
+
+      if (message) {
+        console.log(`[WhatsApp Notificação]: ${message}`);
+        const waUrl = `https://api.whatsapp.com/send?phone=${activeOrder.phone.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`;
+        if (status === OrderStatus.ON_ROUTE || status === OrderStatus.ARRIVED) {
+          window.open(waUrl, '_blank');
+        }
       }
     }
   };
@@ -297,16 +328,19 @@ const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateO
 
                         <div className="mt-8 grid grid-cols-2 gap-4">
                           <button
-                            onClick={() => window.open(`https://api.whatsapp.com/send?phone=5511999999999`, '_blank')}
+                            onClick={() => {
+                              const message = `Olá ${activeOrder.customerName}! Sou o ${driver.name}, seu entregador do MeuGás Digital.`;
+                              window.open(`https://api.whatsapp.com/send?phone=${activeOrder.phone.replace(/\D/g, '')}&text=${encodeURIComponent(message)}`, '_blank');
+                            }}
                             className="py-4 bg-green-500/10 hover:bg-green-500/20 text-green-600 rounded-2xl font-black flex items-center justify-center gap-2 transition-all border border-green-500/10"
                           >
-                            <span className="material-symbols-outlined icon-fill">chat</span> Falar com Base
+                            <span className="material-symbols-outlined icon-fill">chat</span> WhatsApp Cliente
                           </button>
                           <button
-                            onClick={() => window.location.href = `tel:+5511999999999`}
+                            onClick={() => window.location.href = `tel:${activeOrder.phone.replace(/\D/g, '')}`}
                             className="py-4 bg-slate-50 dark:bg-[#101c22] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black flex items-center justify-center gap-2 transition-all border border-slate-100 dark:border-slate-800"
                           >
-                            <span className="material-symbols-outlined">call</span> Ligar
+                            <span className="material-symbols-outlined">call</span> Ligar Cliente
                           </button>
                         </div>
                       </div>

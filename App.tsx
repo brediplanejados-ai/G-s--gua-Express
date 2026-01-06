@@ -247,20 +247,27 @@ const App: React.FC = () => {
     if (dLogin && dPass && dTenant) {
       const user = drivers.find(d =>
         d.login === dLogin &&
-        d.password === dPass &&
-        d.tenantId === dTenant
+        d.password === dPass
       );
 
       if (user) {
-        const newSession: AuthSession = {
-          user,
+        console.log('✅ Auto-login via Link Mágico detectado para:', user.name);
+        setSession({
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            login: user.login,
+            role: 'driver',
+            tenantId: dTenant,
+            avatar: user.avatar
+          },
           type: 'driver',
-          token: 'url-auth-' + Date.now()
-        };
-        setSession(newSession);
-        localStorage.setItem('gas-session', JSON.stringify(newSession));
+          token: 'MAGIC_LINK'
+        });
         setActiveDriverId(user.id);
-        setCurrentView('driver-panel');
+        setCurrentView('dashboard');
+        // Limpar URL para não re-logar ao recarregar
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }

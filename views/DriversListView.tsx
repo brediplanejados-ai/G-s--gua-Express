@@ -107,8 +107,9 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, onAddDriver,
 
     const shareDriverLink = (driver: Driver) => {
         const baseUrl = window.location.origin;
+        // Link Mágico com auto-login e tenant
         const link = `${baseUrl}/?driverLogin=${driver.login}&pass=${driver.password}&tenant=${currentTenantId}`;
-        const message = `Olá ${driver.name}! Aqui está o seu link de acesso exclusivo ao Gás & Água Express:\n\n🔗 ${link}\n\nAbra o link para começar a receber seus pedidos!`;
+        const message = `🔥 *OLÁ ${driver.name.toUpperCase()}!* 🔥\n\nBem-vindo ao time *MeuGás Digital*!\n\nAqui está o seu link de acesso exclusivo ao seu Painel de Entregas:\n\n🔗 ${link}\n\n*Ao abrir o link:*\n1. Clique em "Instalar App" para ter o MeuGás na tela inicial do seu celular.\n2. Seus pedidos aparecerão automaticamente.\n3. Lembre-se de ativar o GPS para o rastreio das entregas!\n\nBora subir o nível! 🚀`;
         const cleanPhone = driver.phone.replace(/\D/g, '');
         window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`, '_blank');
     };
