@@ -1246,6 +1246,7 @@ const App: React.FC = () => {
         return (
           <DriversListView
             drivers={filteredDrivers}
+            orders={filteredOrders}
             onAddDriver={handleAddDriver}
             onDeleteDriver={handleDeleteDriver}
             onUpdateDriver={handleUpdateDriver}
