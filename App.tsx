@@ -715,10 +715,36 @@ const App: React.FC = () => {
   // Automação: Se houver update disponível, inicia o processo sem clique
   useEffect(() => {
     if (showUpdateAlert && !isUpdating) {
-      console.log('🔄 Automação: Nova versão detectada. Iniciando atualização...');
+      console.log('🔄 Automação PWA: Nova versão detectada via SW. Iniciando atualização...');
       handleSystemUpdate();
     }
   }, [showUpdateAlert, isUpdating]);
+
+  // Monitoramento de Versão em Tempo Real (Ataque Total ao Cache)
+  useEffect(() => {
+    const checkGlobalVersion = async () => {
+      try {
+        const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+        const data = await res.json();
+        const localVersion = localStorage.getItem('app-version-control');
+
+        if (localVersion && localVersion !== data.version) {
+          console.log(`🚀 NOVO UPDATE CRÍTICO: ${localVersion} -> ${data.version}`);
+          // Dispara o alerta visual de 7 segundos que já está automatizado
+          setShowUpdateAlert(true);
+        } else if (!localVersion) {
+          localStorage.setItem('app-version-control', data.version);
+        }
+      } catch (e) {
+        console.error('Falha na checagem de versão externa:', e);
+      }
+    };
+
+    // Checagem imediata e depois a cada 30 segundos
+    checkGlobalVersion();
+    const verInterval = setInterval(checkGlobalVersion, 30000);
+    return () => clearInterval(verInterval);
+  }, []);
 
   // Simulação de Rastreamento em Tempo Real
   useEffect(() => {
@@ -784,9 +810,14 @@ const App: React.FC = () => {
         clearInterval(interval);
         // Limpeza profunda de caches e ativação da nova versão
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(registrations => {
+          navigator.serviceWorker.getRegistrations().then(async registrations => {
             for (let registration of registrations) {
-              registration.unregister();
+              await registration.unregister();
+            }
+            // Limpar todos os caches do navegador
+            if ('caches' in window) {
+              const cacheNames = await caches.keys();
+              await Promise.all(cacheNames.map(name => caches.delete(name)));
             }
             window.location.reload();
           });
