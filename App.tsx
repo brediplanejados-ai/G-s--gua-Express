@@ -20,7 +20,7 @@ import SuperAdminView from './views/SuperAdminView';
 import { Driver, View, Order, OrderStatus, Customer, AdminUser, AccessLog, AuthSession, Product, WhatsAppNumber, AutoMessage, ChatMessage, BackupConfig, Tenant, FinancialTransaction, Comodato } from './types';
 import CallerIDSimulation from './components/CallerIDSimulation';
 
-const DEFAULT_TENANT_ID = 't1';
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 
 const INITIAL_PRODUCTS: Product[] = [
   { id: 'p1', tenantId: DEFAULT_TENANT_ID, name: 'Gás P13', price: 120, costPrice: 85, stock: 50, stockEmpty: 10, stockDamaged: 2, minStock: 10, category: 'Gás', icon: 'propane_tank' },
@@ -32,7 +32,7 @@ const INITIAL_DRIVERS: Driver[] = [];
 const INITIAL_ADMINS: AdminUser[] = [
   {
     id: 'a1',
-    tenantId: 't1',
+    tenantId: '00000000-0000-0000-0000-000000000001',
     name: 'Roberto Admin',
     login: 'admin',
     password: '123',
@@ -211,7 +211,7 @@ const App: React.FC = () => {
             name: sbSession.user.user_metadata?.full_name || 'Operador',
             login: sbSession.user.email || '',
             role: 'admin',
-            tenantId: 't1', // No futuro, buscar do admin_users via MCP/SQL
+            tenantId: '00000000-0000-0000-0000-000000000001', // No futuro, buscar do admin_users via MCP/SQL
             avatar: sbSession.user.user_metadata?.avatar_url || 'https://picsum.photos/seed/admin/40/40'
           },
           type: 'admin',
@@ -233,7 +233,7 @@ const App: React.FC = () => {
       subscription.unsubscribe();
       clearTimeout(timer);
     };
-  }, [session, orders, customers, products]);
+  }, [session, orders, customers, products, drivers, waNumbers]);
 
   const handleSaveToCloudSilent = async () => {
     if (!session) return;
@@ -287,7 +287,7 @@ const App: React.FC = () => {
           payment_method: o.paymentMethod,
           status: o.status,
           date: o.date,
-          driver: o.driver
+          driver_id: drivers.find(d => d.name === o.driver)?.id || undefined
         })));
       }
 
@@ -1409,7 +1409,7 @@ const App: React.FC = () => {
               name: newSession.user.user_metadata?.full_name || 'Operador',
               login: newSession.user.email || '',
               role: 'admin',
-              tenantId: 't1',
+              tenantId: '00000000-0000-0000-0000-000000000001',
               avatar: newSession.user.user_metadata?.avatar_url || 'https://picsum.photos/seed/admin/40/40'
             },
             type: 'admin',
