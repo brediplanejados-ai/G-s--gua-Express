@@ -212,7 +212,7 @@ const DashboardView: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      <header className="flex flex-col gap-4 px-8 py-6 bg-white dark:bg-[#1a2c35] border-b border-[#dbe2e6] dark:border-slate-700 shrink-0 z-10 mt-16">
+      <header className="flex flex-col gap-4 px-8 py-3 bg-white dark:bg-[#1a2c35] border-b border-[#dbe2e6] dark:border-slate-700 shrink-0 z-10 mt-16">
         <div className="flex flex-wrap justify-between items-start gap-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
@@ -293,8 +293,8 @@ const DashboardView: React.FC<DashboardProps> = ({
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-          <div className="bg-white dark:bg-[#1a2c35] p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-xl shadow-slate-200/50">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+          <div className="bg-white dark:bg-[#1a2c35] p-4 rounded-2xl border border-slate-100 dark:border-white/5 shadow-xl shadow-slate-200/50">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Balanço de Vendas ({selectedPeriod})</h3>
               <span className="material-symbols-outlined text-primary">analytics</span>
@@ -354,7 +354,7 @@ const DashboardView: React.FC<DashboardProps> = ({
 
                 return (
                   <div className="flex flex-col gap-6">
-                    <div className="relative h-32 w-full px-2">
+                    <div className="relative h-24 w-full px-2">
                       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
                         <defs>
                           <linearGradient id="waveGradient" x1="0" y1="0" x2="0" y2="1">
@@ -394,7 +394,7 @@ const DashboardView: React.FC<DashboardProps> = ({
               })()}
             </div>
           </div>
-          <div className="bg-white dark:bg-[#1a2c35] p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-xl shadow-slate-200/50">
+          <div className="bg-white dark:bg-[#1a2c35] p-4 rounded-2xl border border-slate-100 dark:border-white/5 shadow-xl shadow-slate-200/50">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Métodos de Pagamento</h3>
               <span className="material-symbols-outlined text-primary">pie_chart</span>
@@ -431,8 +431,8 @@ const DashboardView: React.FC<DashboardProps> = ({
               )`;
 
               return (
-                <div className="flex items-center gap-8 h-48">
-                  <div className="size-40 rounded-full relative flex items-center justify-center p-4">
+                <div className="flex items-center gap-8 h-36">
+                  <div className="size-32 rounded-full relative flex items-center justify-center p-4">
                     <div className="absolute inset-0 rounded-full" style={{ background: gradient, maskImage: 'radial-gradient(transparent 58%, black 60%)', WebkitMaskImage: 'radial-gradient(transparent 58%, black 60%)' }}></div>
                     <div className="flex flex-col items-center z-10">
                       <span className="text-xl font-black text-slate-900 dark:text-white">{Math.round(pixPct + cardPct + walletPct)}%</span>
@@ -459,7 +459,7 @@ const DashboardView: React.FC<DashboardProps> = ({
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col gap-6 max-w-[1400px] mx-auto">
           {/* Filters */}
           <div className="flex flex-col md:flex-row gap-4 items-end md:items-center bg-white dark:bg-[#1a2c35] p-4 rounded-xl border border-[#dbe2e6] dark:border-slate-700 shadow-sm">
@@ -475,9 +475,9 @@ const DashboardView: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          {/* Table */}
-          <div className="bg-white dark:bg-[#1a2c35] rounded-xl border border-[#dbe2e6] dark:border-slate-700 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
+          {/* Table Container with Internal Scroll */}
+          <div className="bg-white dark:bg-[#1a2c35] rounded-xl border border-[#dbe2e6] dark:border-slate-700 shadow-sm overflow-hidden flex flex-col max-h-[calc(100vh-600px)] min-h-[400px]">
+            <div className="overflow-auto flex-1 scrollbar-hide">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
