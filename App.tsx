@@ -712,6 +712,14 @@ const App: React.FC = () => {
     };
   }, [session]);
 
+  // Automação: Se houver update disponível, inicia o processo sem clique
+  useEffect(() => {
+    if (showUpdateAlert && !isUpdating) {
+      console.log('🔄 Automação: Nova versão detectada. Iniciando atualização...');
+      handleSystemUpdate();
+    }
+  }, [showUpdateAlert, isUpdating]);
+
   // Simulação de Rastreamento em Tempo Real
   useEffect(() => {
     const interval = setInterval(() => {

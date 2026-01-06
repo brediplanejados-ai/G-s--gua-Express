@@ -137,6 +137,31 @@
             }
         }, true);
 
+        // Sistema de Proteção contra Cache Antigo
+        async function forceUpdateCheck() {
+            try {
+                const res = await fetch('/version.json?t=' + Date.now());
+                const data = await res.json();
+                const localVersion = localStorage.getItem('app-version-control');
+
+                if (localVersion && localVersion !== data.version) {
+                    console.log('🚀 Nova versão detectada, limpando tudo...');
+                    localStorage.setItem('app-version-control', data.version);
+                    if ('serviceWorker' in navigator) {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        for (let reg of regs) await reg.unregister();
+                    }
+                    // Forçar recarregamento ignorando cache
+                    window.location.reload(true);
+                } else if (!localVersion) {
+                    localStorage.setItem('app-version-control', data.version);
+                }
+            } catch (e) {
+                console.error('Update check failed', e);
+            }
+        }
+        forceUpdateCheck();
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js').then(reg => {
