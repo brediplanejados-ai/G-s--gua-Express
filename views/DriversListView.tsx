@@ -107,7 +107,7 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, orders, onAd
     };
 
     const shareDriverLink = (driver: Driver) => {
-        // Link para o novo App Dedicado (Substituir pela URL final do Vercel quando disponível)
+        // Link para o novo App Dedicado na Vercel
         const driverAppUrl = 'https://meugas-entregador.vercel.app';
         const link = `${driverAppUrl}/?driverLogin=${driver.login}&pass=${driver.password}&tenant=${currentTenantId}`;
         const message = `🔥 *OLÁ ${driver.name.toUpperCase()}!* 🔥\n\nBem-vindo ao novo App exclusivo *MeuGás Entregador*!\n\n🔗 ${link}\n\n*Novidades desta versão:*\n✅ Notificações Instantâneas\n✅ Alerta Sonoro de novo pedido\n✅ Mapa Integrado e GPS\n\nAbra o link e clique em "Instalar" para ter o App na sua tela inicial! 🚀`;
