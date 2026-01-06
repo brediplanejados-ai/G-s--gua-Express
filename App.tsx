@@ -643,17 +643,35 @@ const App: React.FC = () => {
     window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('pwa-update-available', updateHandler);
 
-    // Verificação agressiva de atualização (A cada 60 segundos)
+    // Verificação agressiva de atualização (A cada 30 segundos)
     const updateCheckInterval = setInterval(() => {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistration().then(reg => {
           if (reg) {
-            reg.update();
-            console.log('Verificando atualizações de sistema...');
+            reg.update(); // Força a verificação no servidor
           }
         });
       }
-    }, 60000);
+    }, 30000);
+
+    const onStateChange = (newWorker: any) => {
+      if (newWorker.state === 'installed') {
+        if (navigator.serviceWorker.controller) {
+          setShowUpdateAlert(true);
+        }
+      }
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg) {
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (newWorker) newWorker.addEventListener('statechange', () => onStateChange(newWorker));
+          });
+        }
+      });
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
@@ -714,14 +732,29 @@ const App: React.FC = () => {
   const handleSystemUpdate = () => {
     setIsUpdating(true);
     let progress = 0;
+    const duration = 7000; // 7 segundos cravados para o usuário
+    const intervalTime = 100;
+    const increment = (intervalTime / duration) * 100;
+
     const interval = setInterval(() => {
-      progress += 2;
-      setUpdateProgress(progress);
+      progress += increment;
+      setUpdateProgress(Math.min(progress, 100));
+
       if (progress >= 100) {
         clearInterval(interval);
-        window.location.reload();
+        // Limpeza profunda de caches e ativação da nova versão
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (let registration of registrations) {
+              registration.unregister();
+            }
+            window.location.reload();
+          });
+        } else {
+          window.location.reload();
+        }
       }
-    }, 100); // 5 segundos total (50 steps of 100ms)
+    }, intervalTime);
   };
 
   const handleAddOrder = async (newOrder: Order) => {
