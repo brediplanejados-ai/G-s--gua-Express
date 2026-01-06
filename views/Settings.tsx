@@ -16,6 +16,7 @@ interface SettingsProps {
   adminPassword: string;
   onUpdateAdminCredentials: (login: string, pass: string) => void;
   onImportBackup?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onDownloadBackup?: () => void;
   onUpdateLogo?: (logo: string | null) => void;
 }
 
@@ -34,6 +35,7 @@ const SettingsView: React.FC<SettingsProps> = ({
   adminPassword,
   onUpdateAdminCredentials,
   onImportBackup,
+  onDownloadBackup,
   onUpdateLogo
 }) => {
   const [activeTab, setActiveTab] = useState<'perfil' | 'whatsapp' | 'backup'>('perfil');
@@ -352,7 +354,6 @@ const SettingsView: React.FC<SettingsProps> = ({
           </section>
         </div>
       )}
-
       {activeTab === 'backup' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <section className="bg-white dark:bg-[#1a2c35] p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-xl shadow-slate-200/50">
@@ -372,16 +373,7 @@ const SettingsView: React.FC<SettingsProps> = ({
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    const data = { autoMessages, waNumbers, companyName, cnpj, zipCode, street, number, neighborhood, city, backupConfig };
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `backup_gas_agua_${new Date().toISOString().split('T')[0]}.json`;
-                    link.click();
-                    onUpdateBackup({ ...backupConfig, lastLocalBackup: new Date().toISOString() });
-                  }}
+                  onClick={onDownloadBackup}
                   className="w-full bg-primary text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined text-sm">download</span>
@@ -406,34 +398,12 @@ const SettingsView: React.FC<SettingsProps> = ({
                 </div>
               </div>
 
-              <div className="p-8 bg-slate-50 dark:bg-[#101c22] rounded-[2rem] border-2 border-slate-100 dark:border-white/5 relative overflow-hidden">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="size-12 rounded-2xl bg-[#4285F4]/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[#4285F4] text-2xl">cloud_sync</span>
-                  </div>
-                  <div>
-                    <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs">Nuvem (Google Drive)</h4>
-                    <p className="text-[10px] font-bold text-slate-400">Sincronização automática</p>
-                  </div>
+              <div className="p-8 bg-slate-50 dark:bg-[#101c22] rounded-[2rem] border-2 border-slate-100 dark:border-white/5 relative overflow-hidden flex flex-col items-center justify-center text-center opacity-60">
+                <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <span className="material-symbols-outlined text-primary text-3xl">verified_user</span>
                 </div>
-                {!backupConfig.googleDriveConnected ? (
-                  <button
-                    onClick={() => onUpdateBackup({ ...backupConfig, googleDriveConnected: true })}
-                    className="w-full bg-[#4285F4] text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#4285F4]/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-sm">link</span>
-                    Conectar Google Drive
-                  </button>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                      <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm">check_circle</span>
-                        Conectado
-                      </span>
-                    </div>
-                  </div>
-                )}
+                <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs mb-2">Segurança Máxima</h4>
+                <p className="text-[10px] font-bold text-slate-400 max-w-[200px]">Seus dados são sincronizados automaticamente em tempo real com a nuvem.</p>
               </div>
             </div>
           </section>

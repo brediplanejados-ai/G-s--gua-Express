@@ -14,15 +14,13 @@ interface SidebarProps {
   onInstallApp?: () => void;
   showInstallButton?: boolean;
   globalLogo?: string | null;
-  onSaveToDatabase?: () => void;
-  isSyncing?: boolean;
   onOpenManualOrder: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
   currentView, setView, toggleDarkMode, isDarkMode, onLogout,
   userName, userRole, pendingOrdersCount, onInstallApp,
-  showInstallButton, globalLogo, onSaveToDatabase, isSyncing,
+  showInstallButton, globalLogo,
   onOpenManualOrder
 }) => {
   const menuItems = [
@@ -122,23 +120,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-sm font-medium">{isDarkMode ? 'Modo Claro' : 'Modo Escuro'}</span>
           </button>
 
-          {onSaveToDatabase && (
-            <button
-              onClick={onSaveToDatabase}
-              disabled={isSyncing}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all w-full mt-1 ${isSyncing
-                ? 'bg-primary/10 text-primary cursor-wait'
-                : 'bg-primary/10 text-primary hover:bg-primary/20'
-                }`}
-            >
-              <span className={`material-symbols-outlined font-black ${isSyncing ? 'animate-spin' : ''}`}>
-                {isSyncing ? 'sync' : 'cloud_upload'}
-              </span>
-              <span className="text-sm font-black uppercase tracking-tight">
-                {isSyncing ? 'Salvando...' : 'Salvar na Nuvem'}
-              </span>
-            </button>
-          )}
 
           {showInstallButton && onInstallApp && (
             <button

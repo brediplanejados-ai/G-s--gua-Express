@@ -176,6 +176,7 @@ const App: React.FC = () => {
     localStorage.setItem('gas-tenants', JSON.stringify(tenants));
     localStorage.setItem('gas-pix-key', pixKey);
     localStorage.setItem('gas-currentview', currentView);
+    localStorage.setItem('gas-backup', JSON.stringify(backupConfig));
     if (activeDriverId) localStorage.setItem('gas-activedriverid', activeDriverId);
     else localStorage.removeItem('gas-activedriverid');
     if (globalLogo) localStorage.setItem('gas-global-logo', globalLogo);
@@ -542,6 +543,35 @@ const App: React.FC = () => {
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleDownloadBackup = () => {
+    const data = {
+      orders,
+      customers,
+      drivers,
+      admins,
+      products,
+      tenants,
+      autoMessages,
+      waNumbers,
+      chatHistory,
+      backupConfig,
+      pixKey,
+      accessLogs,
+      globalLogo,
+      primaryColor,
+      financeTransactions,
+      version: '1.0.0',
+      timestamp: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `backup_completo_gas_agua_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleImportBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1059,6 +1089,7 @@ const App: React.FC = () => {
             adminPassword={tenants.find(t => t.id === session?.user?.tenantId)?.adminPassword || ''}
             onUpdateAdminCredentials={handleUpdateAdminCredentials}
             onImportBackup={handleImportBackup}
+            onDownloadBackup={handleDownloadBackup}
             onUpdateLogo={setGlobalLogo}
           />
         );
@@ -1282,18 +1313,9 @@ const App: React.FC = () => {
 
       {/* Main Container */}
       <div className={`flex-1 flex flex-col overflow-hidden relative ${session.type === 'driver' || currentView === 'driver-panel' || currentView === 'super-admin' ? 'w-full' : ''}`}>
-        {/* Indicador de Salvamento Automático (Nuvem) - OCULTO CONFORME SOLICITAÇÃO */}
-        {/* <div className={`absolute top-4 right-8 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/10 transition-all duration-500 shadow-lg ${isSaving || isSyncing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
-          <span className={`size-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-spin' : 'bg-emerald-500 animate-pulse'}`}></span>
-          <span className="text-[10px] font-black text-white uppercase tracking-widest">
-            {isSyncing ? 'Baixando Dados...' : 'Backup na Nuvem Ativo'}
-          </span>
-        </div> */}
-
         {renderContent()}
       </div>
 
-      {/* Manual Order Modal Global */}
       <ManualOrderModal
         isOpen={showManualOrderGlobal}
         onClose={() => setShowManualOrderGlobal(false)}
@@ -1304,14 +1326,12 @@ const App: React.FC = () => {
         initialCustomer={modalInitialCustomer}
       />
 
-      {/* Product Modal Global */}
       <ProductModal
         isOpen={showProductModalGlobal}
         onClose={() => setShowProductModalGlobal(false)}
         onAddProduct={(p) => setProducts([...products, p])}
       />
 
-      {/* Splash Screen Premium */}
       {isAppLoading && (
         <div className="fixed inset-0 z-[1000] bg-slate-900 flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
           <div className="absolute inset-0 overflow-hidden">
@@ -1335,7 +1355,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="mt-4 flex justify-between w-full">
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Sincronizando Banco</span>
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Iniciando Sistema</span>
               <span className="text-[9px] font-black text-primary uppercase tracking-widest">{loadingProgress}%</span>
             </div>
           </div>
@@ -1346,7 +1366,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Alerta de Atualização do Sistema (Único e Premium) */}
       {showUpdateAlert && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[300] w-[90%] max-w-md animate-in slide-in-from-top-10 duration-700">
           <div className="bg-slate-900/95 backdrop-blur-xl border border-white/10 p-5 rounded-[2rem] shadow-2xl overflow-hidden relative">
@@ -1377,7 +1396,6 @@ const App: React.FC = () => {
               )}
             </div>
 
-            {/* Barra de Carregamento */}
             <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
               <div
                 className={`h-full bg-primary transition-all duration-300 ease-out ${isUpdating ? 'opacity-100' : 'opacity-0'}`}
@@ -1385,7 +1403,6 @@ const App: React.FC = () => {
               ></div>
             </div>
 
-            {/* Detalhe de brilho na barra */}
             {isUpdating && (
               <div className="absolute bottom-0 left-0 h-1 bg-primary/30 blur-sm animate-pulse" style={{ width: '100%' }}></div>
             )}

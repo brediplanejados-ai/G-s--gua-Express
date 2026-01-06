@@ -132,6 +132,22 @@ const ManualOrderModal: React.FC<ManualOrderModalProps> = ({
                         <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">
                             {selectedCustomer ? `Para: ${selectedCustomer.name}` : 'Preencha os dados do cliente'}
                         </p>
+                        {selectedCustomer && (
+                            <div className="flex gap-2 mt-2">
+                                {selectedCustomer.loyaltyPoints > 0 && (
+                                    <span className="px-2 py-0.5 bg-amber-100 text-amber-600 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
+                                        {selectedCustomer.loyaltyPoints} Pontos
+                                    </span>
+                                )}
+                                {selectedCustomer.hasBorrowedEq && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-600 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-[12px]">inventory_2</span>
+                                        Comodato Ativo
+                                    </span>
+                                )}
+                            </div>
+                        )}
                     </div>
                     <button onClick={onClose} className="size-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                         <span className="material-symbols-outlined text-[20px]">close</span>
