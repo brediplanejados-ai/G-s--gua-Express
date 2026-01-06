@@ -10,9 +10,14 @@ interface DashboardProps {
   products: Product[];
   onAddProduct: (product: Product) => void;
   pixKey?: string;
+  onOpenManualOrder: () => void;
+  onOpenProductModal: () => void;
 }
 
-const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOrder, onAddOrder, products, onAddProduct, pixKey }) => {
+const DashboardView: React.FC<DashboardProps> = ({
+  orders, customers, onSelectOrder, onAddOrder, products,
+  onAddProduct, pixKey, onOpenManualOrder, onOpenProductModal
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [clientSearch, setClientSearch] = useState('');
   const [showClientResults, setShowClientResults] = useState(false);
@@ -34,56 +39,8 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
   const [manualComplement, setManualComplement] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState<'hoje' | 'semanal' | 'mensal' | 'anual'>('hoje');
 
-  const handleCepChange = async (cep: string) => {
-    const cleanedCep = cep.replace(/\D/g, '');
-    setManualZipCode(cleanedCep);
-
-    if (cleanedCep.length === 8) {
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${cleanedCep}/json/`);
-        const data = await response.json();
-        if (!data.erro) {
-          setManualStreet(data.logradouro);
-          setManualNeighborhood(data.bairro);
-          setManualCity(data.localidade);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar CEP:', error);
-      }
-    }
-  };
+  // Funções de manipulação de pedido e produto movidas para componentes globais
   const [referenceDate, setReferenceDate] = useState(new Date().toISOString().split('T')[0]);
-
-  // Wallet specific
-  const [interestRate, setInterestRate] = useState<number>(0);
-  const [paymentTerm, setPaymentTerm] = useState<15 | 30>(15);
-
-  // Product register
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [newProduct, setNewProduct] = useState<Product>({
-    id: '', name: '', price: 0, category: 'Gás', icon: 'inventory_2'
-  });
-
-  // Cálculo dinâmico do total para o modal
-  const currentTotal = newOrderItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
-
-  const handleAddItem = (name: string, price: number) => {
-    const existing = newOrderItems.find(i => i.name === name);
-    if (existing) {
-      setNewOrderItems(newOrderItems.map(i => i.name === name ? { ...i, quantity: i.quantity + 1 } : i));
-    } else {
-      setNewOrderItems([...newOrderItems, { name, quantity: 1, price }]);
-    }
-  };
-
-  const handleRemoveItem = (name: string) => {
-    const existing = newOrderItems.find(i => i.name === name);
-    if (existing && existing.quantity > 1) {
-      setNewOrderItems(newOrderItems.map(i => i.name === name ? { ...i, quantity: i.quantity - 1 } : i));
-    } else {
-      setNewOrderItems(newOrderItems.filter(i => i.name !== name));
-    }
-  };
 
   // Filtro de ordens por período
   const ordersByPeriod = orders.filter(order => {
@@ -107,6 +64,18 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
     return true;
   });
 
+  // Cálculos de Estatísticas (Declarados APÓS ordersByPeriod)
+  const lowStockProducts = products.filter(p => p.stock <= (p.minStock || 0));
+  const totalRevenue = ordersByPeriod.reduce((acc, o) => acc + o.total, 0);
+  const totalProfit = ordersByPeriod.reduce((acc, o) => {
+    const orderProfit = o.items.reduce((itemAcc, item) => {
+      const product = products.find(p => p.name === item.name);
+      const cost = product ? (product.costPrice || 0) : 0;
+      return itemAcc + (item.price - cost) * item.quantity;
+    }, 0);
+    return acc + orderProfit;
+  }, 0);
+
   const filteredOrders = ordersByPeriod.filter(order =>
     order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -117,52 +86,6 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
     c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
     c.phone.includes(clientSearch)
   );
-
-  const handleCreateOrder = (customer: Customer | null) => {
-    if (newOrderItems.length === 0) {
-      alert("Por favor, adicione pelo menos um item ao pedido.");
-      return;
-    }
-
-    const newOrder: Order = {
-      id: `#${Math.floor(Math.random() * 9000) + 1000}`,
-      tenantId: 't1', // Será definido pelo App.tsx
-      customerName: customer ? customer.name : manualCustomerName || 'Novo Cliente',
-      phone: customer ? customer.phone : manualPhone || '(00) 00000-0000',
-      zipCode: customer ? customer.zipCode : manualZipCode,
-      street: customer ? customer.street : manualStreet,
-      number: customer ? customer.number : manualNumber,
-      neighborhood: customer ? customer.neighborhood : manualNeighborhood,
-      city: customer ? customer.city : manualCity,
-      complement: customer ? customer.complement : manualComplement,
-      address: customer ? customer.address : `${manualStreet}, ${manualNumber}`,
-      avatar: customer ? customer.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(manualCustomerName || 'NC')}&background=random`,
-      items: newOrderItems,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      date: new Date().toISOString().split('T')[0],
-      status: OrderStatus.PENDING,
-      waitTime: '0 min',
-      paymentMethod,
-      deliveryType,
-      notes,
-      total: currentTotal
-    };
-
-    onAddOrder(newOrder);
-    setShowManualOrderModal(false);
-    setNewOrderItems([]);
-    setClientSearch('');
-    setSelectedCustomer(null);
-    setManualCustomerName('');
-    setManualPhone('');
-    setManualZipCode('');
-    setManualStreet('');
-    setManualNumber('');
-    setManualNeighborhood('');
-    setManualCity('');
-    setManualComplement('');
-    setNotes('');
-  };
 
   const getStatusBadge = (status: OrderStatus) => {
     const baseClasses = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold";
@@ -221,18 +144,7 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
     }
   };
 
-  // Cálculo de Lucro
-  const totalRevenue = ordersByPeriod.reduce((acc, o) => acc + o.total, 0);
-  const totalProfit = ordersByPeriod.reduce((acc, o) => {
-    const orderProfit = o.items.reduce((itemAcc, item) => {
-      const product = products.find(p => p.name === item.name);
-      const cost = product ? product.costPrice : 0;
-      return itemAcc + (item.price - cost) * item.quantity;
-    }, 0);
-    return acc + orderProfit;
-  }, 0);
-
-  const lowStockProducts = products.filter(p => p.stock <= p.minStock);
+  // Cálculos removidos para evitar duplicidade
 
   return (
     <main className="flex-1 flex flex-col h-full overflow-hidden relative">
@@ -313,14 +225,18 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
               <span>Exportar</span>
             </button>
             <button
-              onClick={() => {
-                setSelectedCustomer(null);
-                setShowManualOrderModal(true);
-              }}
-              className="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold shadow-sm shadow-primary/30 hover:bg-primary/90 transition-colors"
+              onClick={onOpenProductModal}
+              className="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-white text-sm font-black border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">inventory_2</span>
+              <span>Novo Produto</span>
+            </button>
+            <button
+              onClick={onOpenManualOrder}
+              className="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-black shadow-sm shadow-primary/30 hover:bg-primary/90 transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">add</span>
-              <span>Novo Pedido Manual</span>
+              <span>Novo Pedido</span>
             </button>
           </div>
         </div>
@@ -629,305 +545,6 @@ const DashboardView: React.FC<DashboardProps> = ({ orders, customers, onSelectOr
           </div>
         </div>
       </div>
-
-      {/* Manual Order Modal */}
-      {showManualOrderModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1a2c35] w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-              <div>
-                <h2 className="text-xl font-black text-slate-900 dark:text-white">Novo Pedido Manual</h2>
-                <p className="text-sm text-slate-500">
-                  {selectedCustomer ? `Para: ${selectedCustomer.name}` : 'Preencha os dados do cliente'}
-                </p>
-              </div>
-              <button onClick={() => setShowManualOrderModal(false)} className="size-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {!selectedCustomer && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nome do Cliente</label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
-                      placeholder="Nome Completo"
-                      value={manualCustomerName}
-                      onChange={(e) => setManualCustomerName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Telefone (WhatsApp)</label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
-                      placeholder="(11) 99999-9999"
-                      value={manualPhone}
-                      onChange={(e) => setManualPhone(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid grid-cols-6 gap-4 col-span-2">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CEP (Busca Automática)</label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
-                        placeholder="00000-000"
-                        value={manualZipCode}
-                        onChange={(e) => handleCepChange(e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-4">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rua / Logradouro</label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
-                        placeholder="Nome da Rua"
-                        value={manualStreet}
-                        onChange={(e) => setManualStreet(e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Número</label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
-                        placeholder="123"
-                        value={manualNumber}
-                        onChange={(e) => setManualNumber(e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Bairro</label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
-                        placeholder="Bairro"
-                        value={manualNeighborhood}
-                        onChange={(e) => setManualNeighborhood(e.target.value)}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cidade</label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] outline-none focus:border-primary transition-all font-bold"
-                        placeholder="Cidade"
-                        value={manualCity}
-                        onChange={(e) => setManualCity(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Itens do Pedido ({newOrderItems.length})</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {products.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => handleAddItem(p.name, p.price)}
-                      className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${p.category === 'Gás' ? 'border-primary/20 bg-primary/5 text-primary' : 'border-cyan-200 bg-cyan-50 text-cyan-600'} hover:scale-[1.05]`}
-                    >
-                      <span className="material-symbols-outlined">{p.icon}</span>
-                      <span className="text-sm font-black whitespace-nowrap">{p.name}</span>
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setShowProductModal(true)}
-                    className="p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 border-dashed flex flex-col items-center justify-center gap-1 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-slate-400">add</span>
-                    <span className="text-sm text-slate-500 font-bold">Adicionar</span>
-                  </button>
-                </div>
-                {newOrderItems.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {newOrderItems.map((item, idx) => (
-                      <div key={idx} className="group relative flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in-95">
-                        <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">
-                          {item.quantity}x {item.name} - R${(item.price * item.quantity).toFixed(0)}
-                        </span>
-                        <button
-                          onClick={() => handleRemoveItem(item.name)}
-                          className="ml-2 size-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[12px] font-black">remove</span>
-                        </button>
-                      </div>
-                    ))}
-                    <button onClick={() => setNewOrderItems([])} className="text-[10px] font-black text-red-500 hover:text-red-600 transition-colors uppercase tracking-widest px-2 self-center">Limpar Tudo</button>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Método de Pagamento</label>
-                  <div className="flex flex-col gap-2">
-                    {['Pix', 'Dinheiro', 'Cartão', 'Carteira'].map(m => (
-                      <button
-                        key={m}
-                        onClick={() => setPaymentMethod(m as any)}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold border-2 transition-all flex items-center justify-between ${paymentMethod === m ? 'border-primary bg-primary/5 text-primary' : 'border-slate-100 dark:border-slate-800 text-slate-600'}`}
-                      >
-                        {m}
-                        {paymentMethod === m && <span className="material-symbols-outlined text-[18px]">check_circle</span>}
-                      </button>
-                    ))}
-                  </div>
-
-                  {paymentMethod === 'Carteira' && (
-                    <div className="mt-4 p-4 bg-primary/5 rounded-2xl border border-primary/10 space-y-4 animate-in slide-in-from-top-2">
-                      <div>
-                        <label className="block text-[10px] font-black text-primary uppercase mb-1.5">Juros Adicional (%)</label>
-                        <input
-                          type="number"
-                          value={interestRate}
-                          onChange={(e) => setInterestRate(Number(e.target.value))}
-                          className="w-full bg-white dark:bg-[#101c22] border-2 border-primary/20 rounded-xl px-4 py-2 text-sm font-black text-primary outline-none focus:border-primary"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setPaymentTerm(15)}
-                          className={`flex-1 py-2 rounded-lg text-xs font-black uppercase transition-all ${paymentTerm === 15 ? 'bg-primary text-white shadow-lg' : 'bg-white dark:bg-[#0b141a] text-slate-400'}`}
-                        >
-                          15 Dias
-                        </button>
-                        <button
-                          onClick={() => setPaymentTerm(30)}
-                          className={`flex-1 py-2 rounded-lg text-xs font-black uppercase transition-all ${paymentTerm === 30 ? 'bg-primary text-white shadow-lg' : 'bg-white dark:bg-[#0b141a] text-slate-400'}`}
-                        >
-                          30 Dias
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo de Entrega</label>
-                  <div className="flex flex-col gap-2">
-                    {['Entrega', 'Retirada'].map(t => (
-                      <button
-                        key={t}
-                        onClick={() => setDeliveryType(t as any)}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold border-2 transition-all flex items-center justify-between ${deliveryType === t ? 'border-primary bg-primary/5 text-primary' : 'border-slate-100 dark:border-slate-800 text-slate-600'}`}
-                      >
-                        {t}
-                        {deliveryType === t && <span className="material-symbols-outlined text-[18px]">check_circle</span>}
-                      </button>
-                    ))}
-                  </div>
-                  {paymentMethod === 'Pix' && pixKey && (
-                    <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-xl animate-in zoom-in-95 duration-200">
-                      <p className="text-[10px] font-black text-primary uppercase mb-1">Pagar via PIX (Chave):</p>
-                      <p className="text-sm font-black text-slate-900 dark:text-white select-all">{pixKey}</p>
-                      <p className="text-[9px] font-bold text-slate-400 mt-1 italic">Clique para selecionar e copiar</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Observações</label>
-                <textarea
-                  className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:bg-[#101c22] resize-none"
-                  rows={3}
-                  placeholder="Troco para 100, campainha estragada, etc..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-500">Valor Total do Pedido</span>
-                <span className="text-2xl font-black text-primary">
-                  R$ {(currentTotal * (1 + (interestRate / 100))).toFixed(2)}
-                  {interestRate > 0 && <span className="text-[10px] text-primary/60 ml-1">(+{interestRate}% juros)</span>}
-                </span>
-              </div>
-              <button
-                onClick={() => handleCreateOrder(selectedCustomer)}
-                className="px-8 py-3 bg-primary text-white font-black rounded-xl shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all"
-              >
-                Confirmar Pedido
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Product Registration Modal */}
-      {showProductModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1a2c35] w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 border border-white/5 animate-in zoom-in-95">
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Novo Produto</h2>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nome do Produto</label>
-                <input
-                  type="text"
-                  value={newProduct.name}
-                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl p-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
-                  placeholder="Ex: P13, Água 20L..."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Preço de Venda</label>
-                  <input
-                    type="number"
-                    value={newProduct.price}
-                    onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
-                    className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl p-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Categoria</label>
-                  <select
-                    value={newProduct.category}
-                    onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value as any })}
-                    className="w-full bg-slate-50 dark:bg-[#101c22] border-2 border-slate-100 dark:border-white/5 rounded-2xl p-4 font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all appearance-none"
-                  >
-                    <option value="Gás">Gás</option>
-                    <option value="Água">Água</option>
-                    <option value="Acessórios">Acessórios</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setShowProductModal(false)}
-                  className="flex-1 py-4 text-slate-500 font-black uppercase text-xs tracking-widest hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    const id = 'p' + Date.now();
-                    const productToAdd = { ...newProduct, id };
-                    onAddProduct(productToAdd);
-                    handleAddItem(productToAdd.name, productToAdd.price);
-                    setShowProductModal(false);
-                    setNewProduct({ id: '', name: '', price: 0, category: 'Gás', icon: 'inventory_2' });
-                  }}
-                  className="flex-1 bg-primary text-white py-4 rounded-2xl font-black shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]"
-                >
-                  Cadastrar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 };

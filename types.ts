@@ -40,6 +40,7 @@ export interface Order {
   deliveryType: 'Entrega' | 'Retirada';
   notes?: string;
   total: number;
+  changeFor?: number;
   lat?: number;
   lng?: number;
 }
@@ -51,9 +52,12 @@ export interface Product {
   price: number;
   costPrice: number;
   stock: number;
+  stockEmpty: number;
+  stockDamaged: number;
   minStock: number;
-  category: 'Gás' | 'Água' | 'Acessórios';
+  category: string;
   icon: string;
+  avatar?: string;
 }
 
 export interface Customer {
@@ -72,6 +76,29 @@ export interface Customer {
   orderHistory: string[];
   creditLimit: number;
   totalDebts: number;
+  loyaltyPoints: number;
+  comodatos: Comodato[];
+  isRecurring: boolean;
+}
+
+export interface Comodato {
+  id: string;
+  itemName: string;
+  quantity: number;
+  date: string;
+  status: 'Ativo' | 'Devolvido';
+}
+
+export interface FinancialTransaction {
+  id: string;
+  tenantId: string;
+  type: 'Receita' | 'Despesa';
+  category: string;
+  description: string;
+  amount: number;
+  date: string;
+  status: 'Pago' | 'Pendente';
+  paymentMethod?: string;
 }
 
 

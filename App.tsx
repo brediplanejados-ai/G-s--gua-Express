@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
+import ManualOrderModal from './components/ManualOrderModal';
+import ProductModal from './components/ProductModal';
 import DashboardView from './views/Dashboard';
 import SettingsView from './views/Settings';
 import OrderDetailView from './views/OrderDetail';
@@ -17,13 +19,14 @@ import InventoryView from './views/InventoryView';
 import FinancialView from './views/FinancialView';
 import LiveMapView from './views/LiveMapView';
 import SuperAdminView from './views/SuperAdminView';
-import { Driver, View, Order, OrderStatus, Customer, AdminUser, AccessLog, AuthSession, Product, WhatsAppNumber, AutoMessage, ChatMessage, BackupConfig, Tenant } from './types';
+import { Driver, View, Order, OrderStatus, Customer, AdminUser, AccessLog, AuthSession, Product, WhatsAppNumber, AutoMessage, ChatMessage, BackupConfig, Tenant, FinancialTransaction, Comodato } from './types';
+import CallerIDSimulation from './components/CallerIDSimulation';
 
 const DEFAULT_TENANT_ID = 't1';
 
 const INITIAL_PRODUCTS: Product[] = [
-  { id: 'p1', tenantId: DEFAULT_TENANT_ID, name: 'Gás P13', price: 120, costPrice: 85, stock: 50, minStock: 10, category: 'Gás', icon: 'propane_tank' },
-  { id: 'p2', tenantId: DEFAULT_TENANT_ID, name: 'Água 20L', price: 20, costPrice: 8, stock: 100, minStock: 20, category: 'Gás', icon: 'water_drop' },
+  { id: 'p1', tenantId: DEFAULT_TENANT_ID, name: 'Gás P13', price: 120, costPrice: 85, stock: 50, stockEmpty: 10, stockDamaged: 2, minStock: 10, category: 'Gás', icon: 'propane_tank' },
+  { id: 'p2', tenantId: DEFAULT_TENANT_ID, name: 'Água 20L', price: 20, costPrice: 8, stock: 100, stockEmpty: 20, stockDamaged: 5, minStock: 20, category: 'Gás', icon: 'water_drop' },
 ];
 
 const INITIAL_DRIVERS: Driver[] = [];
@@ -76,13 +79,28 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>(() => (localStorage.getItem('gas-currentview') as View) || 'dashboard');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [orders, setOrders] = useState<Order[]>(() => JSON.parse(localStorage.getItem('gas-orders') || '[]'));
-  const [customers, setCustomers] = useState<Customer[]>(() => JSON.parse(localStorage.getItem('gas-customers') || '[]'));
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    const raw = JSON.parse(localStorage.getItem('gas-customers') || '[]');
+    return raw.map((c: any) => ({
+      ...c,
+      loyaltyPoints: c.loyaltyPoints || 0,
+      comodatos: c.comodatos || [],
+      isRecurring: c.isRecurring || false
+    }));
+  });
   const [drivers, setDrivers] = useState<Driver[]>(() => JSON.parse(localStorage.getItem('gas-drivers') || '[]'));
   const [admins, setAdmins] = useState<AdminUser[]>(() => JSON.parse(localStorage.getItem('gas-admins') || JSON.stringify(INITIAL_ADMINS)));
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>(() => JSON.parse(localStorage.getItem('gas-logs') || '[]'));
   const [activeDriverId, setActiveDriverId] = useState<string | null>(() => localStorage.getItem('gas-activedriverid'));
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [products, setProducts] = useState<Product[]>(() => JSON.parse(localStorage.getItem('gas-products') || JSON.stringify(INITIAL_PRODUCTS)));
+  const [products, setProducts] = useState<Product[]>(() => {
+    const raw = JSON.parse(localStorage.getItem('gas-products') || JSON.stringify(INITIAL_PRODUCTS));
+    return raw.map((p: any) => ({
+      ...p,
+      stockEmpty: p.stockEmpty || 0,
+      stockDamaged: p.stockDamaged || 0
+    }));
+  });
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('gas-darkmode') === 'true');
   const [primaryColor, setPrimaryColor] = useState(() => localStorage.getItem('gas-theme-color') || '#13a4ec');
   const [autoMessages, setAutoMessages] = useState<AutoMessage[]>(() => JSON.parse(localStorage.getItem('gas-automessages') || JSON.stringify(INITIAL_AUTO_MESSAGES)));
@@ -90,6 +108,7 @@ const App: React.FC = () => {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => JSON.parse(localStorage.getItem('gas-chats') || '[]'));
   const [backupConfig, setBackupConfig] = useState<BackupConfig>(() => JSON.parse(localStorage.getItem('gas-backup') || '{"googleDriveConnected":false}'));
   const [pixKey, setPixKey] = useState(() => localStorage.getItem('gas-pix-key') || 'seu-pix@empresa.com');
+  const [financeTransactions, setFinanceTransactions] = useState<FinancialTransaction[]>(() => JSON.parse(localStorage.getItem('gas-finance') || '[]'));
   const [tenants, setTenants] = useState<Tenant[]>(() => {
     const saved = localStorage.getItem('gas-tenants');
     if (saved) return JSON.parse(saved);
@@ -107,6 +126,15 @@ const App: React.FC = () => {
   // Sistema de Atualização
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
+
+  // Splash Screen State
+  const [isAppLoading, setIsAppLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+
+  // Modal States
+  const [showManualOrderGlobal, setShowManualOrderGlobal] = useState(false);
+  const [showProductModalGlobal, setShowProductModalGlobal] = useState(false);
+  const [modalInitialCustomer, setModalInitialCustomer] = useState<Customer | null>(null);
 
   // Efeito Global de Persistência Local
   useEffect(() => {
@@ -153,6 +181,21 @@ const App: React.FC = () => {
     if (globalLogo) localStorage.setItem('gas-global-logo', globalLogo);
     localStorage.setItem('gas-theme-color', primaryColor);
     localStorage.setItem('gas-darkmode', isDarkMode.toString());
+    localStorage.setItem('gas-finance', JSON.stringify(financeTransactions));
+
+    if (isAppLoading) {
+      const interval = setInterval(() => {
+        setLoadingProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setTimeout(() => setIsAppLoading(false), 500);
+            return 100;
+          }
+          return prev + 1;
+        });
+      }, 45); // ~5 seconds (100 * 45ms + small delay)
+      return () => clearInterval(interval);
+    }
 
     if (session) {
       // Auto-save debounced para nuvem quando dados críticos mudarem
@@ -280,7 +323,7 @@ const App: React.FC = () => {
           name: c.name,
           phone: c.phone,
           zipCode: c.zip_code || '',
-          street: '', // Dados não mapeados no DB simplificado
+          street: '',
           number: '',
           address: c.address,
           neighborhood: c.neighborhood,
@@ -288,7 +331,10 @@ const App: React.FC = () => {
           avatar: c.avatar_url || `https://i.pravatar.cc/150?u=${c.name}`,
           orderHistory: [],
           creditLimit: Number(c.credit_limit),
-          totalDebts: Number(c.total_debts)
+          totalDebts: Number(c.total_debts),
+          loyaltyPoints: Number(c.loyalty_points || 0),
+          comodatos: (c.comodatos as any) || [],
+          isRecurring: !!c.is_recurring
         }));
         setCustomers(mappedCustomers);
       }
@@ -307,6 +353,8 @@ const App: React.FC = () => {
           price: Number(p.price),
           costPrice: Number(p.cost_price),
           stock: p.stock,
+          stockEmpty: p.stock_empty || 0,
+          stockDamaged: p.stock_damaged || 0,
           minStock: p.min_stock,
           category: p.category as any,
           icon: p.icon
@@ -735,13 +783,23 @@ const App: React.FC = () => {
         avatar: `https://i.pravatar.cc/150?u=${newOrder.customerName}`,
         orderHistory: [newOrder.id],
         creditLimit: 500,
-        totalDebts: newOrder.paymentMethod === 'Carteira' ? newOrder.total : 0
+        totalDebts: newOrder.paymentMethod === 'Carteira' ? newOrder.total : 0,
+        loyaltyPoints: 0,
+        comodatos: [],
+        isRecurring: false
       };
       setCustomers([...customers, newCustomer]);
-    } else if (newOrder.paymentMethod === 'Carteira') {
+    } else {
+      // Atualiza fidelidade e recorrência se o cliente já existir
       setCustomers(customers.map(c =>
         c.name === newOrder.customerName
-          ? { ...c, totalDebts: c.totalDebts + newOrder.total, orderHistory: [...c.orderHistory, newOrder.id] }
+          ? {
+            ...c,
+            loyaltyPoints: c.loyaltyPoints + 1,
+            isRecurring: true,
+            totalDebts: newOrder.paymentMethod === 'Carteira' ? c.totalDebts + newOrder.total : c.totalDebts,
+            orderHistory: [...c.orderHistory, newOrder.id]
+          }
           : c
       ));
     }
@@ -749,7 +807,11 @@ const App: React.FC = () => {
     const updatedProducts = products.map(p => {
       const orderItem = newOrder.items.find(item => item.name === p.name);
       if (orderItem) {
-        return { ...p, stock: p.stock - orderItem.quantity };
+        return {
+          ...p,
+          stock: p.stock - orderItem.quantity,
+          stockEmpty: (p.stockEmpty || 0) + orderItem.quantity
+        };
       }
       return p;
     });
@@ -768,6 +830,24 @@ const App: React.FC = () => {
   };
 
   const handleUpdateOrder = (updatedOrder: Order) => {
+    const oldOrder = orders.find(o => o.id === updatedOrder.id);
+
+    // Se o pedido foi cancelado, devolve os itens ao estoque (Vazio -> Cheio)
+    if (oldOrder && oldOrder.status !== OrderStatus.CANCELLED && updatedOrder.status === OrderStatus.CANCELLED) {
+      const updatedProducts = products.map(p => {
+        const item = updatedOrder.items.find(i => i.name === p.name);
+        if (item) {
+          return {
+            ...p,
+            stock: p.stock + item.quantity,
+            stockEmpty: Math.max(0, (p.stockEmpty || 0) - item.quantity)
+          };
+        }
+        return p;
+      });
+      setProducts(updatedProducts);
+    }
+
     setOrders(orders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
   };
 
@@ -918,6 +998,8 @@ const App: React.FC = () => {
               setProducts([...products, productWithTenant]);
             }}
             pixKey={pixKey}
+            onOpenManualOrder={() => setShowManualOrderGlobal(true)}
+            onOpenProductModal={() => setShowProductModalGlobal(true)}
           />
         );
       case 'orders':
@@ -1037,9 +1119,23 @@ const App: React.FC = () => {
           />
         );
       case 'inventory':
-        return <InventoryView products={filteredProducts} onUpdateProduct={(updated) => setProducts(products.map(p => p.id === updated.id ? updated : p))} />;
+        return (
+          <InventoryView
+            products={filteredProducts}
+            onUpdateProduct={(updated) => setProducts(products.map(p => p.id === updated.id ? updated : p))}
+            onOpenProductModal={() => setShowProductModalGlobal(true)}
+          />
+        );
       case 'financial':
-        return <FinancialView orders={filteredOrders} products={filteredProducts} />;
+        return (
+          <FinancialView
+            orders={filteredOrders}
+            products={filteredProducts}
+            transactions={financeTransactions}
+            onAddTransaction={(t) => setFinanceTransactions([...financeTransactions, { ...t, tenantId: session?.user?.tenantId || DEFAULT_TENANT_ID }])}
+            onUpdateTransaction={(updated) => setFinanceTransactions(financeTransactions.map(t => t.id === updated.id ? updated : t))}
+          />
+        );
       case 'super-admin':
         return (
           <SuperAdminView
@@ -1138,13 +1234,14 @@ const App: React.FC = () => {
               isDarkMode={isDarkMode}
               onLogout={handleLogout}
               userName={session.user.name}
-              userRole={(session.user as any).role || 'operator'}
-              pendingOrdersCount={filteredOrders.filter(o => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED).length}
+              userRole={session.type === 'admin' ? (session.user as AdminUser).role : 'driver'}
+              pendingOrdersCount={filteredOrders.filter(o => o.status === OrderStatus.PENDING).length}
               onInstallApp={handleInstallApp}
               showInstallButton={!!deferredPrompt}
               globalLogo={globalLogo}
               onSaveToDatabase={handleSaveToCloud}
               isSyncing={isSyncing}
+              onOpenManualOrder={() => setShowManualOrderGlobal(true)}
             />
           </div>
         </>
@@ -1152,16 +1249,69 @@ const App: React.FC = () => {
 
       {/* Main Container */}
       <div className={`flex-1 flex flex-col overflow-hidden relative ${session.type === 'driver' || currentView === 'driver-panel' || currentView === 'super-admin' ? 'w-full' : ''}`}>
-        {/* Indicador de Salvamento Automático (Nuvem) */}
-        <div className={`absolute top-4 right-8 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/10 transition-all duration-500 shadow-lg ${isSaving || isSyncing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+        {/* Indicador de Salvamento Automático (Nuvem) - OCULTO CONFORME SOLICITAÇÃO */}
+        {/* <div className={`absolute top-4 right-8 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/10 transition-all duration-500 shadow-lg ${isSaving || isSyncing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
           <span className={`size-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-spin' : 'bg-emerald-500 animate-pulse'}`}></span>
           <span className="text-[10px] font-black text-white uppercase tracking-widest">
             {isSyncing ? 'Baixando Dados...' : 'Backup na Nuvem Ativo'}
           </span>
-        </div>
+        </div> */}
 
         {renderContent()}
       </div>
+
+      {/* Manual Order Modal Global */}
+      <ManualOrderModal
+        isOpen={showManualOrderGlobal}
+        onClose={() => setShowManualOrderGlobal(false)}
+        customers={customers}
+        products={products}
+        onAddOrder={handleAddOrder}
+        pixKey={pixKey}
+        initialCustomer={modalInitialCustomer}
+      />
+
+      {/* Product Modal Global */}
+      <ProductModal
+        isOpen={showProductModalGlobal}
+        onClose={() => setShowProductModalGlobal(false)}
+        onAddProduct={(p) => setProducts([...products, p])}
+      />
+
+      {/* Splash Screen Premium */}
+      {isAppLoading && (
+        <div className="fixed inset-0 z-[1000] bg-slate-900 flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-[-10%] left-[-10%] size-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] size-[40%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse delay-700"></div>
+          </div>
+
+          <div className="z-10 flex flex-col items-center max-w-sm w-full">
+            <div className="size-24 bg-white/5 rounded-[2.5rem] border border-white/10 flex items-center justify-center mb-8 shadow-2xl">
+              <span className="material-symbols-outlined text-primary text-5xl icon-fill animate-bounce">local_fire_department</span>
+            </div>
+
+            <h1 className="text-white text-3xl font-black uppercase tracking-tighter mb-2 italic">Gás & Água Express</h1>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mb-12">Carregando Ecossistema...</p>
+
+            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+              <div
+                className="h-full bg-primary transition-all duration-300 ease-out shadow-[0_0_15px_rgba(19,164,236,0.5)]"
+                style={{ width: `${loadingProgress}%` }}
+              ></div>
+            </div>
+
+            <div className="mt-4 flex justify-between w-full">
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Sincronizando Banco</span>
+              <span className="text-[9px] font-black text-primary uppercase tracking-widest">{loadingProgress}%</span>
+            </div>
+          </div>
+
+          <div className="absolute bottom-12 text-center z-10">
+            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Versão 3.1.0 • Agência Bredi</p>
+          </div>
+        </div>
+      )}
 
       {/* Alerta de Atualização do Sistema (Único e Premium) */}
       {showUpdateAlert && (
@@ -1208,6 +1358,16 @@ const App: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {session?.user.role === 'admin' && (
+        <CallerIDSimulation
+          customers={customers}
+          onNewOrder={(customer) => {
+            setModalInitialCustomer(customer);
+            setShowManualOrderGlobal(true);
+          }}
+        />
       )}
     </div>
   );

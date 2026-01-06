@@ -50,6 +50,15 @@ const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateO
         status,
         driver: currentDriverName
       });
+
+      // Simulação de Notificação WhatsApp
+      const message = `Olá ${activeOrder.customerName}, sua entrega do Gás & Água Express mudou para: *${status}*.`;
+      console.log(`[WhatsApp Simulado para ${activeOrder.phone}]: ${message}`);
+      // Abre o link do WhatsApp para o entregador enviar manualmente se necessário
+      const waUrl = `https://wa.me/${activeOrder.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+      if (status === OrderStatus.ON_ROUTE || status === OrderStatus.ARRIVED) {
+        window.open(waUrl, '_blank');
+      }
     }
   };
 
@@ -165,16 +174,40 @@ const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateO
                     : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-[#101c22]'
                     }`}
                 >
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <span className="text-[10px] font-black text-slate-400">{o.id} • {o.timestamp}</span>
-                      <h4 className="font-bold text-slate-900 dark:text-white truncate">{o.customerName}</h4>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{o.id}</h4>
+                      <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-1 rounded-lg uppercase">{o.timestamp}</span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${getStatusColor(o.status)}`}>
-                      {o.status}
-                    </span>
+                    <p className="text-sm font-black text-slate-700 dark:text-slate-200 mb-1">{o.customerName}</p>
+                    <p className="text-xs font-bold text-slate-400 mb-3 flex items-center gap-1 italic">
+                      <span className="material-symbols-outlined text-xs">location_on</span>
+                      {o.address}, {o.neighborhood}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {o.items.map((item, idx) => (
+                        <span key={idx} className="px-2 py-1 bg-slate-100 dark:bg-white/5 rounded-md text-[9px] font-black uppercase text-slate-500">
+                          {item.quantity}x {item.name}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-end border-t border-slate-50 dark:border-white/5 pt-3">
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total a Receber</p>
+                        <p className="text-lg font-black text-emerald-600">R$ {o.total.toFixed(2)}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const address = encodeURIComponent(`${o.address}, ${o.neighborhood}, ${o.city}`);
+                          window.open(`https://waze.com/ul?q=${address}&navigate=yes`, '_blank');
+                        }}
+                        className="bg-primary/10 text-primary p-2 rounded-xl flex items-center justify-center hover:bg-primary/20 transition-all"
+                        title="Abrir no Waze"
+                      >
+                        <span className="material-symbols-outlined">directions_car</span>
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-500 line-clamp-1 mb-1">{o.address}</p>
                 </div>
               ))
             )}

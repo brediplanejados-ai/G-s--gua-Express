@@ -16,12 +16,14 @@ interface SidebarProps {
   globalLogo?: string | null;
   onSaveToDatabase?: () => void;
   isSyncing?: boolean;
+  onOpenManualOrder: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
   currentView, setView, toggleDarkMode, isDarkMode, onLogout,
   userName, userRole, pendingOrdersCount, onInstallApp,
-  showInstallButton, globalLogo, onSaveToDatabase, isSyncing
+  showInstallButton, globalLogo, onSaveToDatabase, isSyncing,
+  onOpenManualOrder
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -56,6 +58,18 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
+        {/* Quick Action Button */}
+        <div className="px-3 mb-4">
+          <button
+            onClick={onOpenManualOrder}
+            className="w-full h-14 bg-primary text-white rounded-2xl shadow-xl shadow-primary/30 flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all group overflow-hidden relative"
+          >
+            <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            <span className="material-symbols-outlined text-2xl relative z-10 transition-transform group-hover:rotate-90">add</span>
+            <span className="text-sm font-black uppercase tracking-widest relative z-10">Novo Pedido</span>
+          </button>
+        </div>
+
         {/* Navigation */}
         <nav className="flex-1 px-3 flex flex-col gap-1 overflow-y-auto sidebar-scroll">
           {menuItems.filter(item => {
@@ -83,7 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </span>
               <span className={`text-[15px] ${currentView === item.id || (item.id === 'orders' && currentView === 'dashboard')
                 ? 'font-black uppercase tracking-tight'
-                : 'font-bold'
+                : 'font-black'
                 }`}>
                 {item.label}
               </span>

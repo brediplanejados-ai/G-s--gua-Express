@@ -69,7 +69,12 @@ const ClientsListView: React.FC<ClientsListViewProps> = ({ customers, orders }) 
                                 <div className="flex items-center gap-4 mb-6">
                                     <img src={customer.avatar} className="size-16 rounded-[1.5rem] object-cover" alt={customer.name} />
                                     <div className="flex-1 overflow-hidden">
-                                        <h3 className="font-black text-slate-900 dark:text-white truncate">{customer.name}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-black text-slate-900 dark:text-white truncate">{customer.name}</h3>
+                                            {customer.isRecurring && (
+                                                <span className="material-symbols-outlined text-amber-500 text-xs icon-fill" title="Cliente Recorrente">verified</span>
+                                            )}
+                                        </div>
                                         <p className="text-[11px] font-bold text-primary">{customer.phone}</p>
                                     </div>
                                     <button
@@ -91,16 +96,33 @@ const ClientsListView: React.FC<ClientsListViewProps> = ({ customers, orders }) 
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="p-3 bg-primary/5 rounded-xl text-center">
-                                        <p className="text-[9px] font-black text-primary/60 uppercase tracking-widest mb-1">Total Pedidos</p>
-                                        <p className="text-lg font-black text-primary">{stats.count}</p>
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <div className="p-3 bg-emerald-50 dark:bg-emerald-500/5 rounded-xl text-center">
+                                        <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Fidelidade</p>
+                                        <p className="text-lg font-black text-emerald-600">{customer.loyaltyPoints || 0} pts</p>
                                     </div>
                                     <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-center">
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Gasto Total</p>
                                         <p className="text-lg font-black text-slate-900 dark:text-white">R$ {stats.total.toFixed(2)}</p>
                                     </div>
                                 </div>
+
+                                {customer.comodatos && customer.comodatos.length > 0 && (
+                                    <div className="mt-4 pt-4 border-t border-slate-50 dark:border-white/5">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-xs">propane_tank</span>
+                                            Equipamentos em Comodato
+                                        </p>
+                                        <div className="space-y-2">
+                                            {customer.comodatos.map(c => (
+                                                <div key={c.id} className="flex justify-between items-center text-[11px] font-bold">
+                                                    <span className="text-slate-600 dark:text-slate-400">{c.itemName} x{c.quantity}</span>
+                                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-600 rounded-md text-[9px]">{c.status}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         );
                     })}

@@ -109,10 +109,16 @@ const LiveMapView: React.FC<LiveMapViewProps> = ({ drivers, orders }) => {
                                     <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">
                                         📍 {selectedDriverData?.lat?.toFixed(5)}, {selectedDriverData?.lng?.toFixed(5)}
                                     </p>
-                                    <p className="text-[10px] text-slate-500 font-bold uppercase mb-3">Velocidade: 42 km/h • Bateria: 85%</p>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase mb-3 text-emerald-500 flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-xs">speed</span>
+                                        Velocidade: {selectedDriverData?.currentSpeed || 0} km/h • SINAL ONLINE
+                                    </p>
                                     <div className="flex gap-2">
-                                        <button className="bg-primary text-white text-[10px] font-black px-3 py-1.5 rounded-full hover:bg-primary-hover transition-colors">CHAMAR NO RÁDIO</button>
-                                        <button onClick={() => setSelectedDriver(null)} className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-black px-3 py-1.5 rounded-full">FECHAR</button>
+                                        <button className="bg-primary text-white text-[10px] font-black px-4 py-2 rounded-xl hover:bg-primary-hover transition-colors flex items-center gap-2 shadow-lg shadow-primary/20">
+                                            <span className="material-symbols-outlined text-base">radio</span>
+                                            CHAMAR NO RÁDIO
+                                        </button>
+                                        <button onClick={() => setSelectedDriver(null)} className="bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-black px-4 py-2 rounded-xl">FECHAR</button>
                                     </div>
                                 </div>
                             </div>
