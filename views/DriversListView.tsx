@@ -40,7 +40,7 @@ const DriversListView: React.FC<DriversListViewProps> = ({ drivers, orders, onAd
 
     const handleAddSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const id = 'd' + Math.random().toString(36).substr(2, 9);
+        const id = crypto.randomUUID();
         const driver: Driver = {
             id,
             tenantId: '', // Será preenchido pelo App.tsx

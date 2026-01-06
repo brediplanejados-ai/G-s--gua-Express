@@ -324,7 +324,39 @@ const App: React.FC = () => {
           total: o.total,
           payment_method: o.paymentMethod,
           status: o.status,
-          date: o.date
+          date: o.date,
+          driver: o.driver
+        })));
+      }
+
+      // Sincronizar Entregadores
+      if (drivers.length > 0) {
+        await supabase.from('drivers').upsert(drivers.map(d => ({
+          id: d.id.includes('-') ? d.id : undefined,
+          tenant_id: tenantId,
+          name: d.name,
+          login: d.login,
+          password: d.password,
+          phone: d.phone,
+          status: d.status,
+          vehicle_model: d.vehicle.model,
+          vehicle_plate: d.vehicle.plate,
+          avatar_url: d.avatar,
+          current_km: d.vehicle.currentKM,
+          last_oil_change_km: d.vehicle.lastOilChangeKM,
+          last_oil_change_date: d.vehicle.lastOilChangeDate,
+          next_oil_change_km: d.vehicle.nextOilChangeKM
+        })));
+      }
+
+      // Sincronizar Números de WhatsApp
+      if (waNumbers.length > 0) {
+        await supabase.from('whatsapp_numbers').upsert(waNumbers.map(n => ({
+          id: n.id.includes('-') ? n.id : undefined,
+          tenant_id: tenantId,
+          number: n.number,
+          label: n.label,
+          status: n.status
         })));
       }
       // Pequeno delay para o usuário ver o indicador de salvamento
@@ -425,6 +457,55 @@ const App: React.FC = () => {
           waitTime: '0 min'
         }));
         setOrders(mappedOrders);
+      }
+
+      // 4. Carregar Entregadores
+      const { data: dData, error: dErr } = await supabase
+        .from('drivers')
+        .select('*')
+        .eq('tenant_id', tenantId);
+      if (dErr) throw dErr;
+      if (dData) {
+        const mappedDrivers: Driver[] = dData.map(d => ({
+          id: d.id,
+          tenantId: d.tenant_id,
+          name: d.name,
+          login: d.login,
+          password: d.password,
+          phone: d.phone || '',
+          email: d.email || '',
+          status: d.status as any,
+          avatar: d.avatar_url || `https://i.pravatar.cc/150?u=${d.name}`,
+          vehicle: {
+            model: d.vehicle_model || '',
+            plate: d.vehicle_plate || '',
+            type: (d.vehicle_type as any) || 'Carro',
+            currentKM: d.current_km || 0,
+            startShiftKM: 0,
+            endShiftKM: 0,
+            lastOilChangeKM: d.last_oil_change_km || 0,
+            nextOilChangeKM: d.next_oil_change_km || 5000,
+            lastOilChangeDate: d.last_oil_change_date || '',
+            observations: ''
+          }
+        }));
+        setDrivers(mappedDrivers);
+      }
+
+      // 5. Carregar Números de WhatsApp
+      const { data: waData, error: waErr } = await supabase
+        .from('whatsapp_numbers')
+        .select('*')
+        .eq('tenant_id', tenantId);
+      if (waErr) throw waErr;
+      if (waData) {
+        const mappedWaNumbers: WhatsAppNumber[] = waData.map(n => ({
+          id: n.id,
+          number: n.number,
+          label: n.label,
+          status: n.status as any
+        }));
+        setWaNumbers(mappedWaNumbers);
       }
 
       console.log('✅ Dados carregados do cloud com sucesso.');
@@ -1397,8 +1478,18 @@ const App: React.FC = () => {
       )}
 
       {/* Main Container */}
-      <div className={`flex-1 flex flex-col overflow-hidden relative ${session.type === 'driver' || currentView === 'driver-panel' || currentView === 'super-admin' ? 'w-full' : ''}`}>
-        {renderContent()}
+      <div className={`flex-1 flex flex-col overflow-hidden relative ${session?.type === 'driver' || currentView === 'driver-panel' || currentView === 'super-admin' ? 'w-full' : ''}`}>
+        {session?.type !== 'driver' && renderContent()}
+        {session?.type === 'driver' && (
+          <DriverDashboardView
+            orders={filteredOrders}
+            onUpdateOrder={handleUpdateOrder}
+            driver={filteredDrivers.find(d => d.id === session.user.id)!}
+            onEndShift={handleLogout}
+            onRefreshData={loadDataFromCloud}
+            isSyncing={isSyncing}
+          />
+        )}
       </div>
 
       <ManualOrderModal
