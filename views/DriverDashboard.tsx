@@ -7,9 +7,11 @@ interface DriverDashboardProps {
   onUpdateOrder: (order: Order) => void;
   driver: Driver;
   onEndShift: () => void;
+  onRefreshData?: () => Promise<void>;
+  isSyncing?: boolean;
 }
 
-const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateOrder, driver, onEndShift }) => {
+const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateOrder, driver, onEndShift, onRefreshData, isSyncing }) => {
   const [showNewOrderModal, setShowNewOrderModal] = React.useState(false);
   const [lastOrderAssignedId, setLastOrderAssignedId] = React.useState<string | null>(null);
 
@@ -69,24 +71,46 @@ const DriverDashboardView: React.FC<DriverDashboardProps> = ({ orders, onUpdateO
             <span className="absolute -bottom-1 -right-1 size-4 bg-green-500 border-2 border-[#1a2c35] rounded-full"></span>
           </div>
           <div>
-            <h2 className="font-black text-sm uppercase tracking-tight">{driver.name.split(' ')[0]}</h2>
-            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{driver.vehicle.model}</p>
+            <h2 className="font-black text-[10px] text-primary uppercase tracking-[0.2em]">Painel Entregador</h2>
+            <h2 className="font-black text-sm uppercase tracking-tight text-white">{driver.name}</h2>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="bg-black/20 px-3 py-2 rounded-xl text-right">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onRefreshData?.()}
+            className={`size-10 flex items-center justify-center bg-white/5 rounded-xl active:scale-90 transition-all ${isSyncing ? 'animate-spin text-primary' : 'text-slate-400 hover:text-white'}`}
+            title="Sincronizar Pedidos"
+          >
+            <span className="material-symbols-outlined font-black">sync</span>
+          </button>
+          <div className="hidden sm:block h-8 w-px bg-white/5 mx-1"></div>
+          <div className="bg-black/20 px-3 py-2 rounded-xl text-right min-w-[60px]">
             <span className="text-[8px] font-black text-slate-400 block uppercase tracking-tighter">Entregas</span>
             <span className="text-sm font-black text-white">{completedOrders.length}</span>
           </div>
           <button
             onClick={onEndShift}
             className="size-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl active:scale-90 transition-all"
+            title="Sair do Plantão"
           >
             <span className="material-symbols-outlined font-black">logout</span>
           </button>
         </div>
       </header>
+
+      {/* Barra de Status de Comunicação / Sincronismo */}
+      <div className="px-4 py-2 bg-black/40 border-b border-white/5 flex items-center justify-between text-[9px] font-black uppercase tracking-widest">
+        <div className="flex items-center gap-2">
+          <span className={`size-2 rounded-full ${isSyncing ? 'bg-primary animate-pulse' : 'bg-emerald-500'}`}></span>
+          <span className={isSyncing ? 'text-primary' : 'text-emerald-500'}>
+            {isSyncing ? 'Sincronizando Nuvem...' : 'Sistema Online e Sincronizado'}
+          </span>
+        </div>
+        <div className="text-slate-500">
+          {driver.vehicle.model} • Ref: {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
 
       {/* Ganho do Dia Floating Bar */}
       <div className="px-4 py-3 bg-[#13a4ec]/10 border-b border-white/5 flex items-center justify-between">

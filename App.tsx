@@ -1217,6 +1217,8 @@ const App: React.FC = () => {
               onUpdateOrder={handleUpdateOrder}
               driver={activeDriver}
               onEndShift={handleLogout}
+              onRefreshData={loadDataFromCloud}
+              isSyncing={isSyncing}
             />
           );
         }
